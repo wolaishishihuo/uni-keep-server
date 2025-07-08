@@ -1,5 +1,5 @@
 import { FastingPlan, FastingRecord } from '@prisma/client';
-import dayjs, { getDaysDiff } from '@src/utils/dateUtil';
+import dayjs, { getDateDiff } from '@src/utils/dateUtil';
 
 export const getContinuousFastingDays = (fastingRecords: FastingRecord[]) => {
   if (!fastingRecords.length) {
@@ -30,5 +30,6 @@ export const getFastingDays = (fastingPlans: FastingPlan[]) => {
   if (!fastingPlans.length) {
     return 0;
   }
-  return getDaysDiff(fastingPlans[0].createdAt);
+  const { days } = getDateDiff(fastingPlans[0].createdAt);
+  return days;
 };

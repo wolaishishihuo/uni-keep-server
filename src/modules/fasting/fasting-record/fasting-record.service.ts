@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
+import dayjs from '@utils/dateUtil';
 
 @Injectable()
 export class FastingRecordService {
@@ -36,10 +37,23 @@ export class FastingRecordService {
   }
 
   async update(updateFastingRecordDto: UpdateFastingRecordDto) {
+    const recordInfo = await this.prisma.fastingRecord.findUnique({
+      where: { id: updateFastingRecordDto.id }
+    });
+    if (!recordInfo) {
+      return {
+        code: 404,
+        message: '断食记录不存在'
+      };
+    }
+
     try {
       await this.prisma.fastingRecord.update({
         where: { id: updateFastingRecordDto.id },
-        data: updateFastingRecordDto
+        data: {
+          ...updateFastingRecordDto,
+          actualHours: dayjs(updateFastingRecordDto.endTime).diff(dayjs(recordInfo.startTime), 'hours')
+        }
       });
       return {
         code: 200,

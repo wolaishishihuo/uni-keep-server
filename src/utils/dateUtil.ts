@@ -137,28 +137,93 @@ export const msofUtil = (dateUtil: IDateUtil): number => {
 };
 
 /**
- * 计算两个时间相差的天数（默认北京时间）。
- * @param start 起始时间
- * @param end 结束时间，默认当前时间
+ * 计算两个日期之间的时间差，返回相隔多少年、多少月、多少天
+ * @param startDate 开始日期
+ * @param endDate 结束日期，默认当前时间
  * @param utcOffset 可选，时区偏移（小时），默认8
- * @returns 天数差
+ * @returns 包含年、月、天的对象
  * @example
- * // 计算 2024-07-01 到 2024-07-09 相差天数
- * getDaysDiff('2024-07-01', '2024-07-09'); // => 8
+ * // 计算具体日期差异
+ * getDateDiff('2022-07-01', '2024-07-09');
+ * // => { years: 2, months: 0, days: 8 }
  *
- * // 只传起始时间，计算到今天
- * getDaysDiff('2024-07-01');
+ * // 计算到今天的差异
+ * getDateDiff('2024-01-01');
+ * // => { years: 0, months: 6, days: 8 }
  */
-export const getDaysDiff = (
-  start: string | number | Date,
-  end?: string | number | Date,
+export const getDateDiff = (
+  startDate: string | number | Date,
+  endDate?: string | number | Date,
   utcOffset: number = 8
-): number => {
-  const startDay = dayjs(start || dayjs())
-    .utcOffset(utcOffset)
-    .startOf('day');
-  const endDay = end ? dayjs(end).utcOffset(utcOffset).startOf('day') : dayjs().utcOffset(utcOffset).startOf('day');
-  return endDay.diff(startDay, 'day');
+): { years: number; months: number; days: number } => {
+  const start = dayjs(startDate).utcOffset(utcOffset).startOf('day');
+  const end = endDate
+    ? dayjs(endDate).utcOffset(utcOffset).startOf('day')
+    : dayjs().utcOffset(utcOffset).startOf('day');
+
+  // 验证日期有效性
+  if (!start.isValid() || !end.isValid()) {
+    throw new Error('无效的日期格式');
+  }
+
+  // 确保结束日期不早于开始日期
+  if (end.isBefore(start)) {
+    throw new Error('结束日期不能早于开始日期');
+  }
+
+  // 计算详细的年、月、天差异
+  const years = end.diff(start, 'year');
+  const months = end.diff(start.add(years, 'year'), 'month');
+  const days = end.diff(start.add(years, 'year').add(months, 'month'), 'day');
+
+  return { years, months, days };
+};
+
+/**
+ * 计算断食时长（精确到小时，支持跨天跨月）
+ * @param startDateTime 开始时间，格式为 YYYY-MM-DD HH:mm:ss
+ * @param endDateTime 结束时间，格式为 YYYY-MM-DD HH:mm:ss
+ * @param utcOffset 可选，时区偏移（小时），默认8
+ * @returns 断食时长（小时，保留2位小数）
+ * @example
+ * // 同一天断食
+ * calculateFastingDuration('2024-07-09 08:00:00', '2024-07-09 16:00:00');
+ * // => 8.00
+ *
+ * // 跨天断食
+ * calculateFastingDuration('2024-07-09 23:30:00', '2024-07-10 07:30:00');
+ * // => 8.00
+ *
+ * // 长期断食
+ * calculateFastingDuration('2024-07-09 20:00:00', '2024-07-11 08:00:00');
+ * // => 36.00
+ */
+export const calculateFastingDuration = (startDateTime: string, endDateTime: string, utcOffset: number = 8): number => {
+  // 验证日期时间格式
+  const dateTimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+  if (!dateTimeRegex.test(startDateTime) || !dateTimeRegex.test(endDateTime)) {
+    throw new Error('日期时间格式不正确，应为 YYYY-MM-DD HH:mm:ss');
+  }
+
+  // 解析日期时间
+  const start = dayjs(startDateTime).utcOffset(utcOffset);
+  const end = dayjs(endDateTime).utcOffset(utcOffset);
+
+  // 验证日期有效性
+  if (!start.isValid() || !end.isValid()) {
+    throw new Error('无效的日期时间格式');
+  }
+
+  // 验证结束时间不能早于开始时间
+  if (end.isBefore(start)) {
+    throw new Error('结束时间不能早于开始时间');
+  }
+
+  // 计算小时差（支持小数）
+  const diffHours = end.diff(start, 'hour', true);
+
+  // 保留2位小数
+  return Math.round(diffHours * 100) / 100;
 };
 
 /**

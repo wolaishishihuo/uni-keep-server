@@ -2474,8 +2474,8 @@ packages:
     resolution: {integrity: sha512-TLz+x/vEXm/Y7P7wn1EJFNLxYpUD4TgMosxY6fAVJUnJMbupHBOncxyWUG9OpTaH9EBD7uFI5LfEgmMOc54DsA==}
     engines: {node: '>=8'}
 
-  devtools-protocol@0.0.1481382:
-    resolution: {integrity: sha512-CjipcaS3RxrA1IyR/5dlcqTfwwevXN5oiaeFJ5wqNGsYpzKtvNjtoFcMh6wrGZQeqSADaPGf2IJJrO/bBZqz8g==}
+  devtools-protocol@0.0.1483532:
+    resolution: {integrity: sha512-RssKqadd06uWwBZlDF7FPmmoY9Sa1g86QwFjOek+rPrHUT8RTrvojcfl1N5CDeQNeZaW3ctYtro44YXg+aC6qg==}
 
   dezalgo@1.0.4:
     resolution: {integrity: sha512-rXSP0bf+5n0Qonsb+SVVfNfIsimO4HEtmnIpPHY8Q1UCzKlQrDMfdobr8nJOOsRgWCyMRqeSBQzmWUMq7zvVig==}
@@ -5691,7 +5691,7 @@ snapshots:
       '@crawlee/types': 3.13.9
       '@crawlee/utils': 3.13.9
       cheerio: 1.0.0-rc.12
-      devtools-protocol: 0.0.1481382
+      devtools-protocol: 0.0.1483532
       idcac-playwright: 0.1.3
       jquery: 3.7.1
       ow: 0.28.2
@@ -7661,7 +7661,7 @@ snapshots:
 
   detect-newline@3.1.0: {}
 
-  devtools-protocol@0.0.1481382: {}
+  devtools-protocol@0.0.1483532: {}
 
   dezalgo@1.0.4:
     dependencies:

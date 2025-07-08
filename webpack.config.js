@@ -23,7 +23,8 @@ module.exports = {
   resolve: {
     alias: {
       '@src': path.resolve(__dirname, 'src'),
-      '@common': path.resolve(__dirname, 'src/common')
+      '@common': path.resolve(__dirname, 'src/common'),
+      '@utils': path.resolve(__dirname, 'src/utils')
     },
     extensions: ['.js', '.ts', '.json']
   },
