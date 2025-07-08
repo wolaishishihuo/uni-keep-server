@@ -1,6 +1,7 @@
 import * as dayjs from 'dayjs';
 import * as utc from 'dayjs/plugin/utc';
 import * as customParseFormat from 'dayjs/plugin/customParseFormat';
+import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 
 dayjs.extend(utc);
 dayjs.extend(customParseFormat);
@@ -67,7 +68,7 @@ export const parseTimeString = (timeString: string, baseDate?: Date | string, ut
   // 验证时间格式
   const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
   if (!timeRegex.test(timeString)) {
-    throw new Error('时间格式不正确，应为 HH:mm:ss');
+    throw new HttpException('时间格式不正确，应为 HH:mm:ss', HttpStatus.BAD_REQUEST);
   }
 
   // 使用基础日期，默认为今天
@@ -163,12 +164,12 @@ export const getDateDiff = (
 
   // 验证日期有效性
   if (!start.isValid() || !end.isValid()) {
-    throw new Error('无效的日期格式');
+    throw new BadRequestException('无效的日期格式');
   }
 
   // 确保结束日期不早于开始日期
   if (end.isBefore(start)) {
-    throw new Error('结束日期不能早于开始日期');
+    throw new HttpException('结束日期不能早于开始日期', HttpStatus.BAD_REQUEST);
   }
 
   // 计算详细的年、月、天差异
@@ -202,7 +203,7 @@ export const calculateFastingDuration = (startDateTime: string, endDateTime: str
   // 验证日期时间格式
   const dateTimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
   if (!dateTimeRegex.test(startDateTime) || !dateTimeRegex.test(endDateTime)) {
-    throw new Error('日期时间格式不正确，应为 YYYY-MM-DD HH:mm:ss');
+    throw new HttpException('日期时间格式不正确，应为 YYYY-MM-DD HH:mm:ss', HttpStatus.BAD_REQUEST);
   }
 
   // 解析日期时间
@@ -211,12 +212,12 @@ export const calculateFastingDuration = (startDateTime: string, endDateTime: str
 
   // 验证日期有效性
   if (!start.isValid() || !end.isValid()) {
-    throw new Error('无效的日期时间格式');
+    throw new HttpException('无效的日期时间格式', HttpStatus.BAD_REQUEST);
   }
 
   // 验证结束时间不能早于开始时间
   if (end.isBefore(start)) {
-    throw new Error('结束时间不能早于开始时间');
+    throw new HttpException('结束时间不能早于开始时间', HttpStatus.BAD_REQUEST);
   }
 
   // 计算小时差（支持小数）

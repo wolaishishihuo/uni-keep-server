@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
-import dayjs from '@utils/dateUtil';
+import { calculateFastingDuration } from '@utils/dateUtil';
 
 @Injectable()
 export class FastingRecordService {
@@ -46,13 +46,15 @@ export class FastingRecordService {
         message: '断食记录不存在'
       };
     }
+    const actualHours = calculateFastingDuration(recordInfo.startTime, updateFastingRecordDto.endTime);
+    return actualHours;
 
     try {
       await this.prisma.fastingRecord.update({
         where: { id: updateFastingRecordDto.id },
         data: {
           ...updateFastingRecordDto,
-          actualHours: dayjs(updateFastingRecordDto.endTime).diff(dayjs(recordInfo.startTime), 'hours')
+          actualHours
         }
       });
       return {
