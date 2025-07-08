@@ -1,0 +1,497 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 代码质量与测试标准
+
+## 📝 TypeScript 代码规范
+
+### 类型定义规范
+```typescript
+// ✅ 正确：明确的类型定义
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface CreateUserRequest {
+  email: string;
+  name: string;
+  password: string;
+}
+
+// ❌ 避免：any 类型
+function processData(data: any): any {
+  return data;
+}
+
+// ✅ 正确：泛型约束
+function processData<T extends Record<string, unknown>>(data: T): T {
+  return data;
+}
+```
+
+### 错误处理规范
+```typescript
+// ✅ 正确：具体的错误类型
+import {
+  BadRequestException,
+  NotFoundException,
+  ConflictException
+} from '@nestjs/common';
+
+@Injectable()
+export class UsersService {
+  async createUser(createUserDto: CreateUserDto): Promise<User> {
+    try {
+      // 检查邮箱是否已存在
+      const existingUser = await this.findByEmail(createUserDto.email);
+      if (existingUser) {
+        throw new ConflictException('邮箱已被注册');
+      }
+
+      return await this.userRepository.create(createUserDto);
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+
+      this.logger.error(`创建用户失败: ${error.message}`, error.stack);
+      throw new BadRequestException('创建用户失败');
+    }
+  }
+
+  async findById(id: string): Promise<User> {
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new NotFoundException(`用户 ${id} 不存在`);
+    }
+    return user;
+  }
+}
+```
+
+### 日志记录规范
+参考 [src/common/configs/logger.config.ts](mdc:src/common/configs/logger.config.ts)：
+
+```typescript
+@Injectable()
+export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
+  async createUser(createUserDto: CreateUserDto): Promise<User> {
+    this.logger.log(`开始创建用户: ${createUserDto.email}`);
+
+    try {
+      const user = await this.userRepository.create(createUserDto);
+      this.logger.log(`用户创建成功: ${user.id}`);
+      return user;
+    } catch (error) {
+      this.logger.error(
+        `用户创建失败: ${createUserDto.email}`,
+        error.stack,
+        'UsersService'
+      );
+      throw error;
+    }
+  }
+}
+```
+
+## 🧪 测试标准规范
+
+### 单元测试规范
+参考项目中的测试文件结构：
+
+#### Controller 测试
+参考 [src/user/user.controller.spec.ts](mdc:src/user/user.controller.spec.ts)：
+
+```typescript
+import { Test, TestingModule } from '@nestjs/testing';
+import { UsersController } from './users.controller';
+import { UsersService } from './users.service';
+
+describe('UsersController', () => {
+  let controller: UsersController;
+  let service: UsersService;
+
+  const mockUsersService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [UsersController],
+      providers: [
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
+        },
+      ],
+    }).compile();
+
+    controller = module.get<UsersController>(UsersController);
+    service = module.get<UsersService>(UsersService);
+  });
+
+  it('应该被定义', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('应该创建用户成功', async () => {
+      const createUserDto = {
+        email: 'test@example.com',
+        name: 'Test User',
+        password: 'Password123!',
+      };
+      const expectedUser = { id: '1', ...createUserDto };
+
+      mockUsersService.create.mockResolvedValue(expectedUser);
+
+      const result = await controller.create(createUserDto);
+
+      expect(service.create).toHaveBeenCalledWith(createUserDto);
+      expect(result).toEqual(expectedUser);
+    });
+  });
+
+  describe('findAll', () => {
+    it('应该返回用户列表', async () => {
+      const expectedUsers = [
+        { id: '1', email: 'user1@example.com', name: 'User 1' },
+        { id: '2', email: 'user2@example.com', name: 'User 2' },
+      ];
+
+      mockUsersService.findAll.mockResolvedValue(expectedUsers);
+
+      const result = await controller.findAll('1', '10');
+
+      expect(service.findAll).toHaveBeenCalledWith(1, 10);
+      expect(result).toEqual(expectedUsers);
+    });
+  });
+});
+```
+
+#### Service 测试
+参考 [src/user/user.service.spec.ts](mdc:src/user/user.service.spec.ts)：
+
+```typescript
+import { Test, TestingModule } from '@nestjs/testing';
+import { UsersService } from './users.service';
+import { GlobalService } from '../global/global.service';
+import { NotFoundException, ConflictException } from '@nestjs/common';
+
+describe('UsersService', () => {
+  let service: UsersService;
+  let globalService: GlobalService;
+
+  const mockPrisma = {
+    user: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+  };
+
+  const mockGlobalService = {
+    getPrisma: jest.fn().mockReturnValue(mockPrisma),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        {
+          provide: GlobalService,
+          useValue: mockGlobalService,
+        },
+      ],
+    }).compile();
+
+    service = module.get<UsersService>(UsersService);
+    globalService = module.get<GlobalService>(GlobalService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('应该被定义', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('应该创建用户成功', async () => {
+      const createUserDto = {
+        email: 'test@example.com',
+        name: 'Test User',
+        password: 'hashedPassword',
+      };
+      const expectedUser = { id: '1', ...createUserDto };
+
+      mockPrisma.user.findUnique.mockResolvedValue(null); // 邮箱不存在
+      mockPrisma.user.create.mockResolvedValue(expectedUser);
+
+      const result = await service.create(createUserDto);
+
+      expect(mockPrisma.user.create).toHaveBeenCalledWith({
+        data: createUserDto,
+      });
+      expect(result).toEqual(expectedUser);
+    });
+
+    it('邮箱已存在时应该抛出冲突异常', async () => {
+      const createUserDto = {
+        email: 'existing@example.com',
+        name: 'Test User',
+        password: 'hashedPassword',
+      };
+      const existingUser = { id: '1', email: 'existing@example.com' };
+
+      mockPrisma.user.findUnique.mockResolvedValue(existingUser);
+
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+  });
+
+  describe('findOne', () => {
+    it('应该返回用户', async () => {
+      const userId = '1';
+      const expectedUser = { id: userId, email: 'test@example.com' };
+
+      mockPrisma.user.findUnique.mockResolvedValue(expectedUser);
+
+      const result = await service.findOne(userId);
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+      expect(result).toEqual(expectedUser);
+    });
+
+    it('用户不存在时应该抛出未找到异常', async () => {
+      const userId = 'non-existent';
+
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+});
+```
+
+### 集成测试规范
+
+#### E2E 测试
+参考 [test/app.e2e-spec.ts](mdc:test/app.e2e-spec.ts)：
+
+```typescript
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from './../src/app.module';
+
+describe('Users (e2e)', () => {
+  let app: INestApplication;
+  let jwtToken: string;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+
+    // 登录获取token
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'admin@example.com',
+        password: 'admin123',
+      })
+      .expect(200);
+
+    jwtToken = loginResponse.body.data.accessToken;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  describe('/users (POST)', () => {
+    it('应该创建新用户', () => {
+      return request(app.getHttpServer())
+        .post('/users')
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .send({
+          email: 'newuser@example.com',
+          name: 'New User',
+          password: 'Password123!',
+        })
+        .expect(201)
+        .expect((res) => {
+          expect(res.body.success).toBe(true);
+          expect(res.body.data.email).toBe('newuser@example.com');
+          expect(res.body.data.password).toBeUndefined(); // 密码不应返回
+        });
+    });
+
+    it('邮箱格式错误时应该返回400', () => {
+      return request(app.getHttpServer())
+        .post('/users')
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .send({
+          email: 'invalid-email',
+          name: 'User',
+          password: 'Password123!',
+        })
+        .expect(400);
+    });
+  });
+
+  describe('/users (GET)', () => {
+    it('应该返回用户列表', () => {
+      return request(app.getHttpServer())
+        .get('/users')
+        .set('Authorization', `Bearer ${jwtToken}`)
+        .expect(200)
+        .expect((res) => {
+          expect(res.body.success).toBe(true);
+          expect(Array.isArray(res.body.data)).toBe(true);
+        });
+    });
+
+    it('未认证时应该返回401', () => {
+      return request(app.getHttpServer())
+        .get('/users')
+        .expect(401);
+    });
+  });
+});
+```
+
+### 测试覆盖率要求
+
+#### 配置Jest覆盖率
+参考 [package.json](mdc:package.json) 中的jest配置：
+
+```json
+{
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.(t|j)s",
+      "!src/main.ts",
+      "!src/**/*.module.ts",
+      "!src/**/*.dto.ts",
+      "!src/**/*.interface.ts"
+    ],
+    "coverageDirectory": "../coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "coverageThresholds": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  }
+}
+```
+
+## 🔍 代码质量工具
+
+### ESLint 配置规范
+```json
+{
+  "extends": [
+    "@nestjs/eslint-config-nestjs"
+  ],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/explicit-function-return-type": "warn",
+    "@typescript-eslint/no-explicit-any": "error",
+    "prefer-const": "error",
+    "no-var": "error"
+  }
+}
+```
+
+### Prettier 代码格式化
+```json
+{
+  "semi": true,
+  "trailingComma": "all",
+  "singleQuote": true,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false
+}
+```
+
+### Husky Git Hooks
+```json
+{
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{md,json}": [
+      "prettier --write"
+    ]
+  }
+}
+```
+
+## 📋 代码质量检查清单
+
+### 开发前检查
+- [ ] 类型定义完整准确
+- [ ] 接口设计符合规范
+- [ ] 错误处理策略明确
+- [ ] 日志记录规划完整
+
+### 开发中检查
+- [ ] 遵循命名规范
+- [ ] 函数职责单一
+- [ ] 避免深层嵌套
+- [ ] 适当的注释说明
+- [ ] 异步操作正确处理
+
+### 开发后检查
+- [ ] 单元测试覆盖率≥80%
+- [ ] 集成测试通过
+- [ ] ESLint检查通过
+- [ ] 代码格式化规范
+- [ ] 性能测试通过
+
+### 提交前检查
+- [ ] 所有测试通过
+- [ ] 代码审查完成
+- [ ] 文档更新完整
+- [ ] 变更日志记录
+- [ ] 安全检查通过

@@ -1,0 +1,393 @@
+// Prisma Schema 文件 - 健康管理应用数据库设计
+// 支持断食管理、体重记录、情侣互动、成就系统等功能
+
+// Prisma 客户端生成器配置
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 数据源配置 - 使用 MySQL 数据库
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表 - 存储用户基本信息和身体数据
+model User {
+  id                     String            @id @default(uuid())                   // 用户唯一标识符
+  openId                 String            @unique @map("open_id") @db.VarChar(100)     // 微信用户唯一标识
+  unionId                String?           @map("union_id") @db.VarChar(100)            // 微信开放平台统一标识
+  nickname               String            @db.VarChar(50)                              // 用户昵称
+  avatar                 String?           @db.VarChar(255)                             // 用户头像URL
+  height                 Decimal?          @db.Decimal(5, 2)                           // 身高(cm)，支持小数
+  targetWeight           Decimal?          @map("target_weight") @db.Decimal(5, 2)     // 目标体重(kg)
+  currentWeight          Decimal?          @map("current_weight") @db.Decimal(5, 2)    // 当前体重(kg)
+  gender                 Gender?                                                        // 性别
+  age                    Int?                                                           // 年龄
+  birthday               String?           @map("birthday") @db.VarChar(100)           // 生日信息
+  phone                  String?           @map("phone") @db.VarChar(11)                 // 手机号
+  signature              String?           @map("signature") @db.VarChar(100)         // 个性签名
+
+
+  inviteCode             String?           @unique @map("invite_code") @db.VarChar(20) // 邀请码，用于情侣配对
+  coupleId               String?           @map("couple_id") @db.VarChar(36)           // 情侣关系ID
+  isActive               Boolean           @default(true) @map("is_active")            // 账户是否激活
+  lastLoginAt            DateTime?         @map("last_login_at")                       // 最后登录时间
+  createdAt              DateTime          @default(now()) @map("created_at")          // 创建时间
+  updatedAt              DateTime          @updatedAt @map("updated_at")               // 更新时间
+
+  // 关系映射 - 用户相关的所有数据关联
+  invitedRelations       CoupleRelation[]  @relation("InvitedBy")        // 该用户发起的情侣邀请
+  initiatedRelations     CoupleRelation[]  @relation("User1")            // 作为用户1的情侣关系
+  acceptedRelations      CoupleRelation[]  @relation("User2")            // 作为用户2的情侣关系
+  receivedEncouragements Encouragement[]   @relation("ReceivedEncouragements") // 收到的鼓励消息
+  sentEncouragements     Encouragement[]   @relation("SentEncouragements")     // 发送的鼓励消息
+  fastingPlans           FastingPlan[]                                   // 断食计划
+  fastingRecords         FastingRecord[]                                 // 断食记录
+  foodRecords            FoodRecord[]                                    // 饮食记录
+  notifications          Notification[]                                  // 通知消息
+  userAchievements       UserAchievement[]                               // 用户成就
+  weightRecords          WeightRecord[]                                  // 体重记录
+
+  @@map("users")
+}
+
+// 断食计划表 - 用户制定的断食方案
+model FastingPlan {
+  id               String          @id @default(uuid())                           // 计划唯一标识符
+  userId           String          @map("user_id")                                // 所属用户ID
+  name             String          @db.VarChar(100)                               // 计划名称
+  fastingType      FastingPlanType @default(TIME_16_8) @map("fasting_type")      // 断食类型
+  fastingHours     Int             @default(16) @map("fasting_hours")            // 断食时长(小时)，默认16小时
+  eatingHours      Int             @default(8) @map("eating_hours")              // 进食时长(小时)，默认8小时
+  startTime        String          @map("start_time") @db.VarChar(8)             // 断食开始时间(HH:MM格式)
+  endTime          String          @map("end_time") @db.VarChar(8)               // 断食结束时间(HH:MM格式)
+  isActive         String          @default("0") @map("is_active")          // 是否为当前活跃计划
+  createdAt        DateTime        @default(now()) @map("created_at")            // 创建时间
+  updatedAt        DateTime        @updatedAt @map("updated_at")                 // 更新时间
+  fasting_reminder String?         @db.VarChar(8)                                // 断食提醒时间(HH:MM格式)
+
+  // 关系映射
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)    // 所属用户
+  fastingRecords   FastingRecord[]                                               // 基于此计划的断食记录
+
+  // 索引优化
+  @@index([userId])                    // 用户查询优化
+  @@index([userId, isActive])          // 查询用户活跃计划优化
+  @@map("fasting_plans")
+}
+
+// 断食记录表 - 用户每日断食执行情况
+model FastingRecord {
+  id          String        @id @default(uuid())                               // 记录唯一标识符
+  userId      String        @map("user_id")                                    // 所属用户ID
+  planId      String        @map("plan_id")                                    // 关联的断食计划ID
+  date        DateTime      @db.Date                                           // 断食日期
+  startTime   String        @map("start_time") @db.VarChar(8)                 // 实际开始时间(HH:MM格式)
+  endTime     String?       @map("end_time") @db.VarChar(8)                   // 实际结束时间(HH:MM格式)
+  actualHours Decimal       @default(0.00) @map("actual_hours") @db.Decimal(4, 2) // 实际断食时长
+  status      FastingStatus @default(active)                                  // 断食状态
+  breakReason String?       @map("break_reason") @db.VarChar(200)             // 中断原因
+  moodBefore  MoodBefore?   @map("mood_before")                               // 断食前心情
+  moodAfter   MoodAfter?    @map("mood_after")                                // 断食后心情
+  createdAt   DateTime      @default(now()) @map("created_at")                // 创建时间
+  updatedAt   DateTime      @updatedAt @map("updated_at")                     // 更新时间
+
+  // 关系映射
+  plan        FastingPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)  // 关联断食计划
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)  // 所属用户
+
+  // 索引和约束
+  @@unique([userId, date])             // 确保用户每天只有一条断食记录
+  @@index([planId])                    // 计划查询优化
+  @@index([status])                    // 状态查询优化
+  @@index([userId, date])              // 用户日期查询优化
+  @@map("fasting_records")
+}
+
+// 体重记录表 - 用户体重变化追踪
+model WeightRecord {
+  id          String   @id @default(uuid())                                   // 记录唯一标识符
+  userId      String   @map("user_id")                                        // 所属用户ID
+  weight      Decimal  @db.Decimal(5, 2)                                     // 体重值(kg)
+  date        DateTime @db.Date                                               // 记录日期
+  mood        Mood     @default(normal)                                       // 当日心情
+  note        String?  @db.VarChar(500)                                       // 备注信息
+  photoBefore String?  @map("photo_before") @db.VarChar(255)                 // 称重前照片URL
+  photoAfter  String?  @map("photo_after") @db.VarChar(255)                  // 称重后照片URL
+  bmi         Decimal? @db.Decimal(4, 2)                                      // BMI指数
+  bodyFatRate Decimal? @map("body_fat_rate") @db.Decimal(4, 2)               // 体脂率(%)
+  muscleMass  Decimal? @map("muscle_mass") @db.Decimal(5, 2)                 // 肌肉量(kg)
+  recordTime  DateTime @default(now()) @map("record_time")                   // 记录时间
+  createdAt   DateTime @default(now()) @map("created_at")                    // 创建时间
+  updatedAt   DateTime @updatedAt @map("updated_at")                         // 更新时间
+
+  // 关系映射
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)  // 所属用户
+
+  // 索引和约束
+  @@unique([userId, date])             // 确保用户每天只有一条体重记录
+  @@index([userId, date])              // 用户日期查询优化
+  @@index([userId, weight, date])      // 体重趋势查询优化
+  @@map("weight_records")
+}
+
+// 成就定义表 - 系统预定义的成就类型
+model AchievementDefinition {
+  id               String            @id @default(uuid())                       // 成就定义唯一标识符
+  code             String            @unique @db.VarChar(50)                    // 成就代码(唯一)
+  type             AchievementType                                              // 成就类型分类
+  title            String            @db.VarChar(100)                           // 成就标题
+  description      String            @db.VarChar(200)                           // 成就描述
+  icon             String            @db.VarChar(100)                           // 成就图标
+  ruleConfig       Json?             @map("rule_config")                        // 成就规则配置(JSON格式)
+  points           Int               @default(0)                                // 成就奖励积分
+  rarity           AchievementRarity @default(common)                           // 成就稀有度
+  isActive         Boolean           @default(true) @map("is_active")           // 是否启用
+  sortOrder        Int               @default(0) @map("sort_order")             // 排序顺序
+  createdAt        DateTime          @default(now()) @map("created_at")         // 创建时间
+  updatedAt        DateTime          @updatedAt @map("updated_at")              // 更新时间
+
+  // 关系映射
+  userAchievements UserAchievement[]                                            // 用户获得的成就
+
+  // 索引优化
+  @@index([type])                      // 类型查询优化
+  @@index([rarity])                    // 稀有度查询优化
+  @@map("achievement_definitions")
+}
+
+// 用户成就表 - 用户获得的成就进度和状态
+model UserAchievement {
+  id            String                @id @default(uuid())                     // 用户成就唯一标识符
+  userId        String                @map("user_id")                          // 所属用户ID
+  achievementId String                @map("achievement_id")                   // 成就定义ID
+  progress      Int                   @default(0)                              // 当前进度
+  target        Int                   @default(1)                              // 目标进度
+  unlockedAt    DateTime?             @map("unlocked_at")                      // 解锁时间
+  isUnlocked    Boolean               @default(false) @map("is_unlocked")      // 是否已解锁
+  createdAt     DateTime              @default(now()) @map("created_at")       // 创建时间
+  updatedAt     DateTime              @updatedAt @map("updated_at")            // 更新时间
+
+  // 关系映射
+  achievement   AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Cascade)  // 成就定义
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)         // 所属用户
+
+  // 索引和约束
+  @@unique([userId, achievementId])    // 确保用户每个成就只有一条记录
+  @@index([userId, isUnlocked])        // 用户成就查询优化
+  @@index([achievementId], map: "user_achievements_achievement_id_fkey")  // 成就查询优化
+  @@map("user_achievements")
+}
+
+// 情侣关系表 - 用户间的情侣配对关系
+model CoupleRelation {
+  id          String       @id @default(uuid())                               // 关系唯一标识符
+  user1Id     String       @map("user1_id")                                   // 用户1 ID
+  user2Id     String       @map("user2_id")                                   // 用户2 ID
+  status      CoupleStatus @default(pending)                                  // 关系状态
+  invitedBy   String       @map("invited_by")                                 // 邀请发起者ID
+  confirmedAt DateTime?    @map("confirmed_at")                               // 关系确认时间
+  createdAt   DateTime     @default(now()) @map("created_at")                 // 创建时间
+  updatedAt   DateTime     @updatedAt @map("updated_at")                      // 更新时间
+
+  // 关系映射
+  inviter     User         @relation("InvitedBy", fields: [invitedBy], references: [id], onDelete: Cascade)  // 邀请发起者
+  user1       User         @relation("User1", fields: [user1Id], references: [id], onDelete: Cascade)       // 用户1
+  user2       User         @relation("User2", fields: [user2Id], references: [id], onDelete: Cascade)       // 用户2
+
+  // 索引和约束
+  @@unique([user1Id, user2Id])         // 确保两个用户间只有一个关系
+  @@index([status])                    // 状态查询优化
+  @@index([invitedBy], map: "couple_relations_invited_by_fkey")       // 邀请者查询优化
+  @@index([user2Id], map: "couple_relations_user2_id_fkey")           // 用户2查询优化
+  @@map("couple_relations")
+}
+
+// 鼓励消息表 - 情侣间的互相鼓励
+model Encouragement {
+  id         String            @id @default(uuid())                           // 鼓励消息唯一标识符
+  senderId   String            @map("sender_id")                              // 发送者ID
+  receiverId String            @map("receiver_id")                            // 接收者ID
+  message    String            @db.VarChar(500)                               // 鼓励内容
+  type       EncouragementType @default(text)                                 // 鼓励类型
+  isRead     Boolean           @default(false) @map("is_read")                // 是否已读
+  readAt     DateTime?         @map("read_at")                                // 阅读时间
+  createdAt  DateTime          @default(now()) @map("created_at")             // 创建时间
+
+  // 关系映射
+  receiver   User              @relation("ReceivedEncouragements", fields: [receiverId], references: [id], onDelete: Cascade)  // 接收者
+  sender     User              @relation("SentEncouragements", fields: [senderId], references: [id], onDelete: Cascade)       // 发送者
+
+  // 索引优化
+  @@index([receiverId, isRead])        // 接收者未读消息查询优化
+  @@index([senderId])                  // 发送者查询优化
+  @@index([createdAt])                 // 时间排序优化
+  @@map("encouragements")
+}
+
+// 通知消息表 - 系统推送通知
+model Notification {
+  id           String             @id @default(uuid())                         // 通知唯一标识符
+  userId       String             @map("user_id")                              // 目标用户ID
+  type         NotificationType                                                // 通知类型
+  title        String             @db.VarChar(100)                             // 通知标题
+  content      String             @db.VarChar(500)                             // 通知内容
+  templateId   String?            @map("template_id") @db.VarChar(100)         // 模板ID
+  pushData     Json?              @map("push_data")                            // 推送数据(JSON格式)
+  status       NotificationStatus @default(pending)                            // 发送状态
+  sentAt       DateTime?          @map("sent_at")                              // 发送时间
+  errorMessage String?            @map("error_message") @db.VarChar(500)       // 错误信息
+  createdAt    DateTime           @default(now()) @map("created_at")           // 创建时间
+
+  // 关系映射
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)  // 目标用户
+
+  // 索引优化
+  @@index([userId, type])              // 用户通知类型查询优化
+  @@index([status])                    // 状态查询优化
+  @@index([createdAt])                 // 时间排序优化
+  @@map("notifications")
+}
+
+// 饮食记录表 - 用户饮食情况追踪
+model FoodRecord {
+  id            String   @id @default(uuid())                                 // 饮食记录唯一标识符
+  userId        String   @map("user_id")                                      // 所属用户ID
+  date          DateTime @db.Date                                             // 记录日期
+  mealType      MealType @map("meal_type")                                    // 餐次类型
+  mealTime      DateTime @map("meal_time")                                    // 用餐时间
+  foodItems     String   @map("food_items") @db.Text                         // 食物清单(JSON格式)
+  satietyRating Int      @map("satiety_rating") @db.TinyInt                  // 饱腹感评分(1-10)
+  mood          MealMood @default(normal)                                     // 用餐心情
+  note          String?  @db.VarChar(500)                                     // 备注信息
+  photo         String?  @db.VarChar(255)                                     // 食物照片URL
+  createdAt     DateTime @default(now()) @map("created_at")                  // 创建时间
+  updatedAt     DateTime @updatedAt @map("updated_at")                       // 更新时间
+
+  // 关系映射
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)  // 所属用户
+
+  // 索引优化
+  @@index([userId, date])              // 用户日期查询优化
+  @@index([userId, mealType])          // 用户餐次查询优化
+  @@map("food_records")
+}
+
+// 系统配置表 - 应用系统参数配置
+model SystemConfig {
+  id          String     @id @default(uuid())                                 // 配置唯一标识符
+  key         String     @unique @db.VarChar(100)                             // 配置键名(唯一)
+  value       String     @db.Text                                             // 配置值
+  description String?    @db.VarChar(200)                                     // 配置描述
+  isPublic    Boolean    @default(false) @map("is_public")                   // 是否为公开配置
+  createdAt   DateTime   @default(now()) @map("created_at")                  // 创建时间
+  updatedAt   DateTime   @updatedAt @map("updated_at")                       // 更新时间
+
+  @@map("system_configs")
+}
+
+// 枚举定义区域
+
+// 断食计划类型枚举
+enum FastingPlanType {
+  TIME_16_8 // 16:8时间限制断食
+  TIME_18_6 // 18:6时间限制断食
+  CUSTOM    // 自定义模式
+}
+
+// 性别枚举
+enum Gender {
+  male    // 男性
+  female  // 女性
+}
+
+// 断食状态枚举
+enum FastingStatus {
+  active    // 进行中
+  completed // 已完成
+  broken    // 已中断
+}
+
+// 断食前心情枚举
+enum MoodBefore {
+  excited // 兴奋期待
+  normal  // 平静正常
+  worried // 担心焦虑
+}
+
+// 断食后心情枚举
+enum MoodAfter {
+  great // 感觉很棒
+  good  // 感觉良好
+  tired // 感觉疲惫
+}
+
+// 一般心情枚举
+enum Mood {
+  happy  // 开心
+  normal // 正常
+  sad    // 难过
+}
+
+// 成就类型枚举
+enum AchievementType {
+  fasting     // 断食相关成就
+  weight      // 体重相关成就
+  couple      // 情侣相关成就
+  special     // 特殊成就
+  consistency // 坚持相关成就
+}
+
+// 成就稀有度枚举
+enum AchievementRarity {
+  common    // 普通
+  rare      // 稀有
+  epic      // 史诗
+  legendary // 传说
+}
+
+// 情侣关系状态枚举
+enum CoupleStatus {
+  pending  // 待确认
+  active   // 活跃中
+  inactive // 已失效
+}
+
+// 鼓励类型枚举
+enum EncouragementType {
+  text        // 文本消息
+  emoji       // 表情符号
+  achievement // 成就分享
+}
+
+// 通知类型枚举
+enum NotificationType {
+  fasting_reminder   // 断食提醒
+  achievement_unlock // 成就解锁
+  couple_encourage   // 情侣鼓励
+  system            // 系统通知
+  weight_reminder   // 体重提醒
+}
+
+// 通知状态枚举
+enum NotificationStatus {
+  pending // 待发送
+  sent    // 已发送
+  failed  // 发送失败
+}
+
+// 餐次类型枚举
+enum MealType {
+  breakfast // 早餐
+  lunch     // 午餐
+  dinner    // 晚餐
+  snack     // 零食
+}
+
+// 用餐心情枚举
+enum MealMood {
+  satisfied // 满足
+  normal    // 正常
+  guilty    // 愧疚
+}

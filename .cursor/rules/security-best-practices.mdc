@@ -1,0 +1,372 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 安全开发最佳实践
+
+## 🔐 认证与授权安全
+
+### JWT 安全配置
+参考 [src/common/constants.ts](mdc:src/common/constants.ts) 和 [src/auth](mdc:src/auth)：
+
+#### JWT 密钥管理
+```typescript
+// ❌ 错误：硬编码密钥
+export const jwtConstants = {
+  secret: 'secretKey', // 不安全
+};
+
+// ✅ 正确：环境变量
+export const jwtConstants = {
+  secret: process.env.JWT_SECRET, // 从环境变量读取
+  expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+  refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+};
+```
+
+#### 密码安全处理
+```typescript
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class AuthService {
+  // 密码加密
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 12; // 使用足够的盐轮数
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  // 密码验证
+  async validatePassword(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+  }
+
+  // 密码强度验证
+  validatePasswordStrength(password: string): boolean {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    return (
+      password.length >= minLength &&
+      hasUpperCase &&
+      hasLowerCase &&
+      hasNumbers &&
+      hasSpecialChar
+    );
+  }
+}
+```
+
+### 认证守卫增强
+参考 [src/common/guards](mdc:src/common/guards)：
+
+```typescript
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  canActivate(context: ExecutionContext) {
+    const request = context.switchToHttp().getRequest();
+
+    // IP白名单检查（管理员接口）
+    if (this.isAdminRoute(request.url)) {
+      const clientIp = this.getClientIp(request);
+      if (!this.isAllowedIp(clientIp)) {
+        throw new ForbiddenException('IP not allowed');
+      }
+    }
+
+    return super.canActivate(context);
+  }
+
+  private getClientIp(request: any): string {
+    return request.headers['x-forwarded-for'] ||
+           request.connection.remoteAddress ||
+           request.socket.remoteAddress;
+  }
+}
+```
+
+## 🛡️ 输入验证与数据安全
+
+### 严格的数据验证
+```typescript
+import { IsEmail, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+
+export class CreateUserDto {
+  @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  email: string;
+
+  @IsString()
+  @MinLength(8, { message: '密码至少8位' })
+  @MaxLength(20, { message: '密码最多20位' })
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+    { message: '密码必须包含大小写字母、数字和特殊字符' }
+  )
+  password: string;
+
+  @IsString()
+  @MinLength(2, { message: '用户名至少2位' })
+  @MaxLength(20, { message: '用户名最多20位' })
+  @Matches(/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/, { message: '用户名只能包含字母、数字、下划线和中文' })
+  username: string;
+}
+```
+
+### SQL 注入防护
+```typescript
+// ✅ 正确：使用 Prisma 的类型安全查询
+async findUsersByName(name: string) {
+  const prisma = this.globalService.getPrisma();
+  return prisma.user.findMany({
+    where: {
+      name: {
+        contains: name, // Prisma 自动处理 SQL 注入防护
+      },
+    },
+  });
+}
+
+// ❌ 错误：原生 SQL 拼接
+async findUsersByNameUnsafe(name: string) {
+  const query = `SELECT * FROM users WHERE name LIKE '%${name}%'`; // 危险
+  return this.database.query(query);
+}
+```
+
+### XSS 防护
+```typescript
+import { Transform } from 'class-transformer';
+import { sanitize } from 'class-sanitizer';
+
+export class CreatePostDto {
+  @IsString()
+  @Transform(({ value }) => sanitize(value)) // 自动清理 HTML
+  title: string;
+
+  @IsString()
+  @Transform(({ value }) => this.sanitizeHtml(value))
+  content: string;
+
+  private sanitizeHtml(html: string): string {
+    // 使用 DOMPurify 或类似库清理 HTML
+    return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  }
+}
+```
+
+## 🔒 数据库安全
+
+### 敏感数据加密
+```typescript
+import * as crypto from 'crypto';
+
+@Injectable()
+export class EncryptionService {
+  private readonly algorithm = 'aes-256-gcm';
+  private readonly secretKey = process.env.ENCRYPTION_KEY;
+
+  encrypt(text: string): { encrypted: string; iv: string; tag: string } {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipher(this.algorithm, this.secretKey);
+    cipher.setAAD(Buffer.from('uni-keep'));
+
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    const tag = cipher.getAuthTag();
+
+    return {
+      encrypted,
+      iv: iv.toString('hex'),
+      tag: tag.toString('hex'),
+    };
+  }
+
+  decrypt(encryptedData: { encrypted: string; iv: string; tag: string }): string {
+    const decipher = crypto.createDecipher(this.algorithm, this.secretKey);
+    decipher.setAAD(Buffer.from('uni-keep'));
+    decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
+
+    let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+  }
+}
+```
+
+### 数据库连接安全
+```typescript
+// 环境变量配置示例
+DATABASE_URL="mysql://username:password@localhost:3306/database?sslmode=require"
+REDIS_PASSWORD="strong_redis_password"
+MONGODB_AUTH_SOURCE="admin"
+```
+
+## 🌐 网络安全
+
+### CORS 配置
+```typescript
+// main.ts
+app.enableCors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
+```
+
+### 请求限流
+```typescript
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+
+// 模块配置
+ThrottlerModule.forRoot({
+  ttl: 60, // 60秒窗口
+  limit: 100, // 最多100个请求
+})
+
+// 使用守卫
+@UseGuards(ThrottlerGuard)
+@Controller('auth')
+export class AuthController {
+  @Throttle(5, 60) // 登录接口更严格：60秒内最多5次
+  @Post('login')
+  async login() {}
+}
+```
+
+### 请求大小限制
+```typescript
+// main.ts
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
+```
+
+## 📁 文件上传安全
+
+### 文件类型验证
+```typescript
+import { Express } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+
+@Controller('upload')
+export class UploadController {
+  @Post('image')
+  @UseInterceptors(FileInterceptor('file', {
+    fileFilter: (req, file, callback) => {
+      if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+        return callback(new Error('只允许上传图片文件'), false);
+      }
+      callback(null, true);
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB 限制
+    },
+  }))
+  uploadImage(@UploadedFile() file: Express.Multer.File) {
+    // 文件处理逻辑
+  }
+}
+```
+
+## 🔍 安全日志与监控
+
+### 安全事件记录
+参考 [src/common/configs/logger.config.ts](mdc:src/common/configs/logger.config.ts)：
+
+```typescript
+@Injectable()
+export class SecurityService {
+  private readonly logger = new Logger(SecurityService.name);
+
+  logSecurityEvent(event: string, details: any, request: any) {
+    const securityLog = {
+      event,
+      timestamp: new Date().toISOString(),
+      ip: this.getClientIp(request),
+      userAgent: request.headers['user-agent'],
+      userId: request.user?.id,
+      details,
+    };
+
+    this.logger.warn(`Security Event: ${JSON.stringify(securityLog)}`);
+  }
+
+  logFailedLogin(email: string, ip: string) {
+    this.logSecurityEvent('FAILED_LOGIN', { email }, {
+      headers: { 'x-forwarded-for': ip }
+    });
+  }
+
+  logSuspiciousActivity(activity: string, userId: string, ip: string) {
+    this.logSecurityEvent('SUSPICIOUS_ACTIVITY', { activity, userId }, {
+      headers: { 'x-forwarded-for': ip }
+    });
+  }
+}
+```
+
+## 🔧 环境变量安全
+
+### 敏感配置管理
+```env
+# .env 文件示例（不要提交到版本控制）
+DATABASE_URL="mysql://user:pass@localhost:3306/db"
+JWT_SECRET="your-super-secure-jwt-secret-minimum-32-characters"
+ENCRYPTION_KEY="your-encryption-key-for-sensitive-data"
+REDIS_PASSWORD="your-redis-password"
+
+# 第三方服务密钥
+SMTP_PASSWORD="email-service-password"
+AWS_SECRET_ACCESS_KEY="aws-secret"
+```
+
+### 配置验证
+```typescript
+import { IsString, MinLength } from 'class-validator';
+
+export class SecurityConfig {
+  @IsString()
+  @MinLength(32, { message: 'JWT密钥至少32位' })
+  jwtSecret: string;
+
+  @IsString()
+  @MinLength(16, { message: '加密密钥至少16位' })
+  encryptionKey: string;
+}
+```
+
+## 📋 安全开发检查清单
+
+### 认证授权检查
+- [ ] JWT密钥使用环境变量
+- [ ] 密码使用强加密算法
+- [ ] 实现密码强度验证
+- [ ] 添加认证守卫保护
+- [ ] 实现角色权限控制
+
+### 数据验证检查
+- [ ] 所有输入数据严格验证
+- [ ] 防止SQL注入攻击
+- [ ] 防止XSS攻击
+- [ ] 文件上传类型限制
+- [ ] 请求大小限制
+
+### 网络安全检查
+- [ ] CORS正确配置
+- [ ] 实现请求限流
+- [ ] HTTPS强制使用
+- [ ] 安全头部设置
+- [ ] IP白名单（如需要）
+
+### 监控审计检查
+- [ ] 记录安全事件日志
+- [ ] 监控异常访问
+- [ ] 敏感操作审计
+- [ ] 错误信息脱敏
+- [ ] 定期安全扫描

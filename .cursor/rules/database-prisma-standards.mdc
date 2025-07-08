@@ -1,0 +1,347 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# 数据库与 Prisma 开发标准
+
+## 🗄️ Prisma Schema 设计规范
+
+### 基础配置
+参考 [prisma/schema.prisma](mdc:prisma/schema.prisma)：
+
+```prisma
+// 生成器配置
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 数据源配置
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+```
+
+### 模型设计原则
+
+#### 1. 命名规范
+- 模型名：PascalCase（如 `User`, `BlogPost`）
+- 字段名：camelCase（如 `firstName`, `createdAt`）
+- 表名：自动转换为 snake_case
+
+#### 2. 主键规范
+```prisma
+// ✅ 推荐：UUID主键
+model User {
+  id   String @id @default(uuid())
+}
+
+// ✅ 可选：自增主键
+model User {
+  id   Int @id @default(autoincrement())
+}
+```
+
+#### 3. 时间戳字段（必须）
+```prisma
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+#### 4. 关系设计规范
+```prisma
+// 一对多关系
+model User {
+  id    String @id @default(uuid())
+  posts Post[]
+}
+
+model Post {
+  id       String @id @default(uuid())
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+}
+
+// 多对多关系
+model User {
+  id    String @id @default(uuid())
+  roles UserRole[]
+}
+
+model Role {
+  id    String @id @default(uuid())
+  users UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+}
+```
+
+### 字段类型规范
+
+#### 常用字段类型
+```prisma
+model User {
+  // 字符串类型
+  id       String  @id @default(uuid())
+  email    String  @unique
+  name     String
+  bio      String? @db.Text        // 长文本
+
+  // 数字类型
+  age      Int?
+  balance  Decimal @db.Decimal(10, 2)
+
+  // 布尔类型
+  isActive Boolean @default(true)
+
+  // 日期类型
+  birthDate DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // JSON类型
+  metadata Json?
+}
+```
+
+#### 索引和约束
+```prisma
+model User {
+  id    String @id @default(uuid())
+  email String @unique
+  name  String
+
+  // 复合索引
+  @@index([name, email])
+  // 唯一约束
+  @@unique([email, name])
+}
+```
+
+## 🔗 数据源连接管理
+
+### 连接配置
+参考 [src/datasources/prisma](mdc:src/datasources/prisma) 目录：
+
+#### 环境变量配置
+```env
+# .env文件
+DATABASE_URL="mysql://username:password@localhost:3306/database_name"
+```
+
+#### 动态连接实现
+参考 [src/datasources/prisma/index.ts](mdc:src/datasources/prisma/index.ts)：
+```typescript
+export const connectPrisma = async (
+  datasourceUrl: string,
+  logger: Logger,
+  callback?: (prisma: PrismaClient) => void
+) => {
+  const prisma = new PrismaClient({
+    datasourceUrl,
+    log: ['query', 'info', 'warn', 'error'],
+  });
+
+  await prisma.$connect();
+  callback?.(prisma);
+  return prisma;
+};
+```
+
+### 全局服务注册
+参考 [src/global/global.service.ts](mdc:src/global/global.service.ts)：
+```typescript
+// 在ApolloConfigService中注册Prisma实例
+connectPrisma(datasourceUrl, this.logger, (prisma) => {
+  this.globalService.setPrisma(prisma);
+});
+```
+
+## 📋 数据库操作规范
+
+### Service层数据操作
+```typescript
+@Injectable()
+export class UsersService {
+  constructor(private readonly globalService: GlobalService) {}
+
+  async create(createUserDto: CreateUserDto) {
+    const prisma = this.globalService.getPrisma();
+    return prisma.user.create({
+      data: createUserDto,
+    });
+  }
+
+  async findAll(page: number = 1, limit: number = 10) {
+    const prisma = this.globalService.getPrisma();
+    const skip = (page - 1) * limit;
+
+    return prisma.user.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOne(id: string) {
+    const prisma = this.globalService.getPrisma();
+    return prisma.user.findUnique({
+      where: { id },
+    });
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const prisma = this.globalService.getPrisma();
+    return prisma.user.update({
+      where: { id },
+      data: updateUserDto,
+    });
+  }
+
+  async remove(id: string) {
+    const prisma = this.globalService.getPrisma();
+    return prisma.user.delete({
+      where: { id },
+    });
+  }
+}
+```
+
+### 事务处理规范
+```typescript
+async transferPoints(fromUserId: string, toUserId: string, amount: number) {
+  const prisma = this.globalService.getPrisma();
+
+  return prisma.$transaction(async (tx) => {
+    // 扣除发送方积分
+    await tx.user.update({
+      where: { id: fromUserId },
+      data: { points: { decrement: amount } },
+    });
+
+    // 增加接收方积分
+    await tx.user.update({
+      where: { id: toUserId },
+      data: { points: { increment: amount } },
+    });
+
+    // 记录转账记录
+    await tx.pointsTransfer.create({
+      data: { fromUserId, toUserId, amount },
+    });
+  });
+}
+```
+
+### 错误处理规范
+```typescript
+async findUser(id: string) {
+  try {
+    const prisma = this.globalService.getPrisma();
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return user;
+  } catch (error) {
+    if (error instanceof PrismaClientKnownRequestError) {
+      // 处理Prisma特定错误
+      throw new BadRequestException('Database operation failed');
+    }
+    throw error;
+  }
+}
+```
+
+## 🚀 数据库迁移规范
+
+### 开发流程
+```bash
+# 1. 修改schema.prisma
+# 2. 生成迁移文件
+pnpm prisma migrate dev --name describe_your_changes
+
+# 3. 生成Prisma客户端
+pnpm prisma generate
+
+# 4. 推送到数据库（开发环境）
+pnpm prisma db push
+```
+
+### 生产环境部署
+```bash
+# 1. 执行迁移
+pnpm prisma migrate deploy
+
+# 2. 生成客户端
+pnpm prisma generate
+```
+
+### 数据填充
+参考 [prisma/seed.ts](mdc:prisma/seed.ts)：
+```typescript
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  // 创建默认用户
+  await prisma.user.createMany({
+    data: [
+      {
+        email: 'admin@example.com',
+        name: 'Admin User',
+        password: 'hashed_password',
+      },
+    ],
+  });
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+```
+
+## 📋 数据库开发检查清单
+
+### Schema设计检查
+- [ ] 模型命名符合规范
+- [ ] 主键字段已定义
+- [ ] 时间戳字段已添加
+- [ ] 关系定义正确
+- [ ] 索引设计合理
+- [ ] 约束设置适当
+
+### 数据操作检查
+- [ ] 使用GlobalService获取Prisma实例
+- [ ] 实现适当的错误处理
+- [ ] 复杂操作使用事务
+- [ ] 查询性能优化
+- [ ] 数据验证完整
+
+### 迁移管理检查
+- [ ] 迁移文件命名清晰
+- [ ] 破坏性变更有备份策略
+- [ ] 测试环境验证通过
+- [ ] 生产部署脚本准备
+- [ ] 回滚方案已制定

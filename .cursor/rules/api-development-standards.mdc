@@ -1,0 +1,173 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# API 开发标准规范
+
+## 🚀 RESTful API 设计规范
+
+### HTTP 方法使用标准
+- `GET` - 查询数据，无副作用
+- `POST` - 创建新资源
+- `PUT` - 完整更新资源
+- `PATCH` - 部分更新资源
+- `DELETE` - 删除资源
+
+### URL 路径设计规范
+```typescript
+// ✅ 正确示例
+GET    /api/users           // 获取用户列表
+GET    /api/users/:id       // 获取单个用户
+POST   /api/users           // 创建用户
+PUT    /api/users/:id       // 更新用户
+DELETE /api/users/:id       // 删除用户
+
+// ❌ 错误示例
+GET    /api/getUsers        // 不要在URL中使用动词
+POST   /api/user            // 资源名使用复数形式
+```
+
+## 🔒 认证授权规范
+
+### JWT 认证实现
+参考 [src/auth](mdc:src/auth) 目录结构：
+- **策略**: [src/auth/strategies](mdc:src/auth/strategies) - JWT和本地认证策略
+- **守卫**: [src/common/guards](mdc:src/common/guards) - 认证守卫实现
+- **常量**: [src/common/constants.ts](mdc:src/common/constants.ts) - JWT配置
+
+### 守卫使用规范
+```typescript
+// Controller级别守卫
+@UseGuards(JwtAuthGuard)
+@Controller('users')
+export class UsersController {}
+
+// 方法级别守卫
+@UseGuards(LocalAuthGuard)
+@Post('login')
+async login() {}
+```
+
+## 📝 DTO 数据验证规范
+
+### DTO 设计标准
+参考 [src/user/dto](mdc:src/user/dto) 目录：
+
+```typescript
+// ✅ 正确的DTO设计
+export class CreateUserDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(20)
+  password: string;
+
+  @IsString()
+  @IsOptional()
+  username?: string;
+}
+```
+
+### 验证规则标准
+- 使用 `class-validator` 装饰器
+- 必填字段使用 `@IsNotEmpty()`
+- 可选字段使用 `@IsOptional()`
+- 提供清晰的错误信息
+
+## 🛡️ 错误处理规范
+
+### 全局异常过滤器
+参考 [src/common/filters/all.exception.ts](mdc:src/common/filters/all.exception.ts)：
+- 统一错误响应格式
+- 记录错误日志
+- 隐藏敏感信息
+
+### 响应拦截器
+参考 [src/common/interceptors/response.interceptor.ts](mdc:src/common/interceptors/response.interceptor.ts)：
+- 统一成功响应格式
+- 添加响应时间统计
+- 数据转换处理
+
+### 标准响应格式
+```typescript
+// 成功响应
+{
+  "success": true,
+  "data": any,
+  "message": string,
+  "timestamp": string
+}
+
+// 错误响应
+{
+  "success": false,
+  "error": {
+    "code": number,
+    "message": string,
+    "details": any
+  },
+  "timestamp": string
+}
+```
+
+## 📊 日志记录规范
+
+### 日志级别使用
+参考 [src/common/configs/logger.config.ts](mdc:src/common/configs/logger.config.ts)：
+- `error` - 系统错误、异常情况
+- `warn` - 警告信息、非关键错误
+- `info` - 关键业务操作
+- `debug` - 调试信息（仅开发环境）
+
+### 日志内容规范
+```typescript
+// ✅ 正确的日志记录
+this.logger.log(`User created successfully: ${userId}`);
+this.logger.error(`Database connection failed: ${error.message}`);
+this.logger.warn(`Rate limit exceeded for IP: ${clientIp}`);
+
+// ❌ 避免记录敏感信息
+this.logger.log(`User password: ${password}`); // 不要记录密码
+```
+
+## 🔍 API 文档规范
+
+### Swagger 注解使用
+```typescript
+@ApiTags('用户管理')
+@Controller('users')
+export class UsersController {
+
+  @ApiOperation({ summary: '创建用户' })
+  @ApiResponse({ status: 201, description: '用户创建成功' })
+  @ApiResponse({ status: 400, description: '请求参数错误' })
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto) {}
+}
+```
+
+## 📋 API 开发检查清单
+
+### 开发前准备
+- [ ] 确认API端点设计符合RESTful规范
+- [ ] 定义请求/响应DTO
+- [ ] 确定认证授权需求
+- [ ] 设计错误处理策略
+
+### 开发中检查
+- [ ] 实现数据验证
+- [ ] 添加认证守卫
+- [ ] 实现业务逻辑
+- [ ] 添加错误处理
+- [ ] 记录操作日志
+
+### 开发后验证
+- [ ] 编写单元测试
+- [ ] 添加API文档注解
+- [ ] 测试各种边界情况
+- [ ] 验证安全性
+- [ ] 性能测试

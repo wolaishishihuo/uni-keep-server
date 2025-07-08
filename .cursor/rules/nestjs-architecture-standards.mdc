@@ -1,0 +1,76 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# NestJS 架构开发标准
+
+## 🏗️ 项目架构规范
+
+### 核心目录结构
+- `src/` - 主要源代码目录
+- `src/api/` - 外部API调用封装
+- `src/auth/` - 认证授权模块
+- `src/common/` - 公共组件(常量、过滤器、守卫、拦截器、中间件)
+- `src/datasources/` - 数据源连接器(MySQL、Redis、MongoDB、ES、Kafka、Apollo)
+- `src/global/` - 全局服务管理
+- `src/utils/` - 工具函数库
+- `prisma/` - 数据库Schema和迁移文件
+
+### 数据源管理规范
+参考 [src/datasources](mdc:src/datasources) 目录结构：
+
+#### 必需数据源（个人项目）
+- **Prisma/MySQL**: [src/datasources/prisma](mdc:src/datasources/prisma) - 主数据库
+- **Redis**: [src/datasources/redis](mdc:src/datasources/redis) - 缓存系统
+
+#### 可选数据源（按需启用）
+- **MongoDB**: [src/datasources/mongodb](mdc:src/datasources/mongodb) - 文档数据库
+- **Elasticsearch**: [src/datasources/es](mdc:src/datasources/es) - 搜索引擎
+- **Kafka**: [src/datasources/kafka](mdc:src/datasources/kafka) - 消息队列
+- **Apollo**: [src/datasources/appollo](mdc:src/datasources/appollo) - 配置中心
+
+### 模块设计原则
+1. **单一职责**: 每个模块只负责一个具体功能
+2. **依赖注入**: 使用NestJS的DI容器管理依赖
+3. **接口分离**: Controller、Service、Repository分层
+4. **配置外部化**: 使用环境变量管理配置
+
+### 文件命名规范
+- Controller: `*.controller.ts`
+- Service: `*.service.ts`
+- Module: `*.module.ts`
+- DTO: `*.dto.ts`
+- Guard: `*.guard.ts`
+- Interceptor: `*.interceptor.ts`
+- Filter: `*.filter.ts`
+
+## 🔧 服务注册规范
+
+### GlobalService使用
+参考 [src/global/global.service.ts](mdc:src/global/global.service.ts)：
+- 所有数据源连接通过GlobalService统一管理
+- 使用setter方法注册数据源实例
+- 通过getter方法获取数据源实例
+
+### 数据源连接规范
+参考 [src/datasources/appollo/apolloClient.service.ts](mdc:src/datasources/appollo/apolloClient.service.ts)：
+- 支持Apollo配置驱动和环境变量两种配置方式
+- 实现优雅的连接失败处理
+- 提供连接状态监控和日志记录
+
+## 📋 开发检查清单
+
+### 新建模块时必须包含
+- [ ] Module文件定义
+- [ ] Controller处理HTTP请求
+- [ ] Service实现业务逻辑
+- [ ] DTO定义数据传输对象
+- [ ] 单元测试文件
+
+### 数据源集成检查
+- [ ] 确认数据源是否必需
+- [ ] 配置连接参数
+- [ ] 实现连接错误处理
+- [ ] 添加健康检查
+- [ ] 更新GlobalService注册
