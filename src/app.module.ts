@@ -22,6 +22,7 @@ import { WeightModule } from './modules/weight/weight.module';
 import { FastingModule } from './modules/fasting/fasting-plan/fasting.module';
 import { SystemModule } from './modules/system/system.module';
 import { FastingRecordModule } from './modules/fasting/fasting-record/fasting-record.module';
+import { AchievementModule } from './modules/achievement/achievement.module';
 import authConfig from './config/auth.config';
 import businessConfig from './config/business.config';
 import thirdPartyConfig from './config/third-party.config';
@@ -52,7 +53,8 @@ import thirdPartyConfig from './config/third-party.config';
     WeightModule,
     FastingModule,
     SystemModule,
-    FastingRecordModule
+    FastingRecordModule,
+    AchievementModule
   ], // 依赖注入
   controllers: [AppController],
   providers: [AppService]
