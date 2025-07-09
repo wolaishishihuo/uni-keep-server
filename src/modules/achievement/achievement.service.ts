@@ -1,26 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAchievementDto } from './dto/create-achievement.dto';
-import { UpdateAchievementDto } from './dto/update-achievement.dto';
+import { FastingChecker } from './checkers/fasting-checker.service';
+import { WeightChecker } from './checkers/weight-checker.service';
 
 @Injectable()
 export class AchievementService {
-  create(createAchievementDto: CreateAchievementDto) {
-    return 'This action adds a new achievement';
+  constructor(
+    private fastingChecker: FastingChecker,
+    private weightChecker: WeightChecker
+  ) {}
+
+  /**
+   * 检查断食相关成就
+   */
+  async checkFastingAchievements(userId: string): Promise<string[]> {
+    return this.fastingChecker.checkAchievements(userId);
   }
 
-  findAll() {
-    return `This action returns all achievement`;
+  /**
+   * 检查体重相关成就
+   */
+  async checkWeightAchievements(userId: string): Promise<string[]> {
+    return this.weightChecker.checkAchievements(userId);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} achievement`;
+  /**
+   * 检查所有成就（可选，用于用户登录时）
+   */
+  async checkAllAchievements(userId: string): Promise<string[]> {
+    const [fastingAchievements, weightAchievements] = await Promise.all([
+      this.fastingChecker.checkAchievements(userId),
+      this.weightChecker.checkAchievements(userId)
+    ]);
+
+    return [...fastingAchievements, ...weightAchievements];
   }
 
-  update(id: number, updateAchievementDto: UpdateAchievementDto) {
-    return `This action updates a #${id} achievement`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} achievement`;
+  /**
+   * 获取所有检查器类型（用于调试）
+   */
+  getCheckerTypes(): string[] {
+    return [this.fastingChecker.getAchievementType(), this.weightChecker.getAchievementType()];
   }
 }

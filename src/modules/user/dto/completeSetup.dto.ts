@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RequiredUserInfoDto } from './requiredUserInfo.dto';
-import { BaseFastingDto } from '../../fasting/fasting-plan/dto/baseFasting.dto';
+import { BaseFastingDto } from '../../fasting/plan/dto/baseFasting.dto';
 import { UpdateSystemDto } from '@src/modules/system/dto/update-system.dto';
 
 export class CompleteSetupDto {

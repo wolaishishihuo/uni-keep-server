@@ -3,13 +3,13 @@ import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
 import { calculateFastingDurationByTime } from '@utils/dateUtil';
-import { AchievementCheckerService } from '../../achievement/achievement-checker.service';
+import { AchievementService } from '../../achievement/achievement.service';
 
 @Injectable()
 export class FastingRecordService {
   constructor(
     @Inject('PrismaClient') private prisma: PrismaClient,
-    private achievementChecker: AchievementCheckerService
+    private achievementService: AchievementService
   ) {}
 
   async create(createFastingRecordDto: CreateFastingRecordDto) {
@@ -68,7 +68,7 @@ export class FastingRecordService {
       });
 
       // 🎯 检查断食成就
-      const newAchievements = await this.achievementChecker.checkFastingAchievements(recordInfo.userId);
+      const newAchievements = await this.achievementService.checkFastingAchievements(recordInfo.userId);
 
       // 🎉 如果有新成就解锁，可以发送通知
       if (newAchievements.length > 0) {
