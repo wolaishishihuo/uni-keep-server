@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
-import { calculateFastingDuration } from '@utils/dateUtil';
+import { calculateFastingDurationByTime } from '@utils/dateUtil';
 
 @Injectable()
 export class FastingRecordService {
@@ -46,8 +46,13 @@ export class FastingRecordService {
         message: '断食记录不存在'
       };
     }
-    const actualHours = calculateFastingDuration(recordInfo.startTime, updateFastingRecordDto.endTime);
-    return actualHours;
+
+    // 使用新的时间计算函数，基于断食记录的日期
+    const actualHours = calculateFastingDurationByTime(
+      recordInfo.startTime,
+      updateFastingRecordDto.endTime,
+      recordInfo.date
+    );
 
     try {
       await this.prisma.fastingRecord.update({

@@ -11,4 +11,17 @@ export class WeightService {
       data: createWeightRecordDto
     });
   }
+
+  async getWeightRecord(query: { userId: string }) {
+    const weightRecord = await this.prisma.weightRecord.findMany({
+      where: { userId: query.userId },
+      orderBy: { date: 'desc' },
+      take: 1
+    });
+    return {
+      code: 200,
+      message: '体重记录获取成功',
+      data: weightRecord[0] || null
+    };
+  }
 }

@@ -60,12 +60,12 @@ model FastingPlan {
   fastingType      FastingPlanType @default(TIME_16_8) @map("fasting_type")      // 断食类型
   fastingHours     Int             @default(16) @map("fasting_hours")            // 断食时长(小时)，默认16小时
   eatingHours      Int             @default(8) @map("eating_hours")              // 进食时长(小时)，默认8小时
-  startTime        String          @map("start_time") @db.VarChar(8)             // 断食开始时间(HH:MM格式)
-  endTime          String          @map("end_time") @db.VarChar(8)               // 断食结束时间(HH:MM格式)
+  startTime        String          @map("start_time") @db.VarChar(8)             // 断食开始时间
+  endTime          String          @map("end_time") @db.VarChar(8)               // 断食结束时间
   isActive         String          @default("0") @map("is_active")          // 是否为当前活跃计划
   createdAt        DateTime        @default(now()) @map("created_at")            // 创建时间
   updatedAt        DateTime        @updatedAt @map("updated_at")                 // 更新时间
-  fasting_reminder String?         @db.VarChar(8)                                // 断食提醒时间(HH:MM格式)
+  fasting_reminder String?         @db.VarChar(8)                                // 断食提醒时间
 
   // 关系映射
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)    // 所属用户
@@ -83,8 +83,8 @@ model FastingRecord {
   userId      String        @map("user_id")                                    // 所属用户ID
   planId      String        @map("plan_id")                                    // 关联的断食计划ID
   date        DateTime      @db.Date                                           // 断食日期
-  startTime   String        @map("start_time") @db.VarChar(8)                 // 实际开始时间(HH:MM格式)
-  endTime     String?       @map("end_time") @db.VarChar(8)                   // 实际结束时间(HH:MM格式)
+  startTime   String        @map("start_time") @db.VarChar(8)                 // 实际开始时间
+  endTime     String?       @map("end_time") @db.VarChar(8)                   // 实际结束时间
   actualHours Decimal       @default(0.00) @map("actual_hours") @db.Decimal(4, 2) // 实际断食时长
   status      FastingStatus @default(active)                                  // 断食状态
   breakReason String?       @map("break_reason") @db.VarChar(200)             // 中断原因
