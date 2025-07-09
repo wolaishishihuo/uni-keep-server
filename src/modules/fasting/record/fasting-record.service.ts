@@ -3,7 +3,7 @@ import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
 import { calculateFastingDurationByTime } from '@utils/dateUtil';
-import { AchievementService } from '../../achievement/achievement.service';
+import { AchievementService } from '@src/modules/achievement/achievement.service';
 
 @Injectable()
 export class FastingRecordService {

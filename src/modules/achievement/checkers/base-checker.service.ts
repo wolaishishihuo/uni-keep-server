@@ -5,14 +5,8 @@ import { PrismaClient, AchievementType } from '@prisma/client';
 export abstract class BaseAchievementChecker {
   constructor(@Inject('PrismaClient') protected prisma: PrismaClient) {}
 
-  /**
-   * 抽象方法：子类必须实现具体的成就检查逻辑
-   */
   abstract checkAchievements(userId: string, context?: any): Promise<string[]>;
 
-  /**
-   * 抽象方法：子类必须返回成就类型
-   */
   abstract getAchievementType(): AchievementType;
 
   /**
@@ -31,7 +25,8 @@ export abstract class BaseAchievementChecker {
         where: {
           userId,
           achievement: { code: { in: achievementCodes } },
-          isUnlocked: false // 只查询未解锁的
+          // 只查询未解锁的
+          isUnlocked: false
         },
         include: { achievement: true }
       });

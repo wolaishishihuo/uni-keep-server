@@ -6,7 +6,7 @@ import { getContinuousFastingDays } from '../../../modules/user/user.utils';
 @Injectable()
 export class FastingChecker extends BaseAchievementChecker {
   /**
-   * 实现抽象方法：检查断食成就
+   * 检查断食成就
    */
   async checkAchievements(userId: string): Promise<string[]> {
     // 获取用户断食数据
@@ -38,7 +38,7 @@ export class FastingChecker extends BaseAchievementChecker {
   }
 
   /**
-   * 实现抽象方法：返回成就类型
+   * 返回成就类型
    */
   getAchievementType(): AchievementType {
     return AchievementType.fasting;
