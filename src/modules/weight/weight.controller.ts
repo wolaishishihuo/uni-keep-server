@@ -6,7 +6,7 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { User } from '@src/common/decorators/user.decorator';
 import { ApiTags } from '@nestjs/swagger';
 
-@ApiTags('体重记录管理')
+@ApiTags('体重记录')
 @UseGuards(JwtAuthGuard)
 @Controller('weight')
 export class WeightController {

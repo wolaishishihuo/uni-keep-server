@@ -6,7 +6,7 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
 import { ApiTags } from '@nestjs/swagger';
 
-@ApiTags('断食记录管理')
+@ApiTags('断食记录')
 @UseGuards(JwtAuthGuard)
 @Controller('fastingRecord')
 export class FastingRecordController {
