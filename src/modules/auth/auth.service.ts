@@ -34,7 +34,7 @@ export class AuthService {
   }
 
   // 用于LocalStrategy的微信验证方法
-  async validateWechatCode(code: string): Promise<any> {
+  async validateWechatCode(code: string): Promise<User> {
     try {
       const { openid, unionid } = await this.wechatService.code2Session(code);
       this.logger.log(`微信验证openid: ${openid}`);
