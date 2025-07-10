@@ -4,7 +4,6 @@ import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '../user/user.module';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { LocalStrategy } from './strategies/local.strategy';
 import { WechatService } from '../third-party/wechat';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthConfig } from '@src/config';
@@ -25,7 +24,7 @@ import { AuthConfig } from '@src/config';
       inject: [ConfigService]
     })
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy, WechatService],
+  providers: [AuthService, JwtStrategy, WechatService],
   exports: [AuthService]
 })
 export class AuthModule {}

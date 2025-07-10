@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Transform } from 'class-transformer';
 import { Gender } from '@src/enums/user';
 import { dateFormat } from '@src/utils/dateUtil';
+import { User } from '@prisma/client';
 
 export class UserResponseEntity {
   @ApiProperty({
@@ -32,7 +33,7 @@ export class UserResponseEntity {
     required: false
   })
   @Expose()
-  @Transform(({ value }) => (value ? parseFloat(value) : null))
+  @Transform(({ value }) => (value ? value.toFixed(1) : null))
   height?: number;
 
   @ApiProperty({
@@ -178,7 +179,7 @@ export class UserResponseEntity {
     return ((this.targetWeight / this.currentWeight) * 100).toFixed(2);
   }
 
-  constructor(partial: Partial<UserResponseEntity>) {
+  constructor(partial: User) {
     Object.assign(this, partial);
   }
 }
