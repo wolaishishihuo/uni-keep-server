@@ -8,8 +8,7 @@ import {
   Param,
   Post,
   UseGuards,
-  UseInterceptors,
-  UnauthorizedException
+  UseInterceptors
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UpdateUserDto } from './dto/updateUser.dto';
