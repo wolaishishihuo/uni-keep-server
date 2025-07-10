@@ -26,7 +26,7 @@ export class WeightController {
     return this.weightService.getWeightRecord(query);
   }
 
-  @Get('trendAnalysis')
+  @Get('getTrendAnalysis')
   @ApiOperation({ summary: '体重趋势分析' })
   @ApiResponse({ status: 200, description: '体重趋势分析成功' })
   async getWeightTrendAnalysis(@User('id') userId: string) {

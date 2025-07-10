@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CreateWeightRecordDto } from './dto/createWeightRecord.dto';
+import { dateFormat } from '@src/utils/dateUtil';
 
 @Injectable()
 export class WeightService {
@@ -26,7 +27,6 @@ export class WeightService {
   }
 
   async getWeightTrendAnalysis(userId: string) {
-    // 获取用户的体重记录，按日期排序
     const weightRecords = await this.prisma.weightRecord.findMany({
       where: { userId },
       orderBy: { date: 'asc' },
@@ -48,10 +48,7 @@ export class WeightService {
       };
     }
 
-    // 生成ECharts格式的数据
-    const dates = weightRecords.map(
-      (record) => record.date.toISOString().split('T')[0] // 格式化为 YYYY-MM-DD
-    );
+    const dates = weightRecords.map((record) => dateFormat(record.date, 'YYYY-MM-DD'));
 
     const weights = weightRecords.map((record) => parseFloat(record.weight.toString()));
 
