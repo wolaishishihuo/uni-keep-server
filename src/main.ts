@@ -19,7 +19,7 @@ function useSwagger(app: INestApplication) {
     .addTag('Swagger')
     .build();
   const document = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('docs', app, document);
 }
 
 async function bootstrap() {
@@ -67,7 +67,8 @@ async function bootstrap() {
   // 服务地址
   const serviceUrl = (await app.getUrl()).replace('[::1]', 'localhost');
   logger.info(`Application is running at: ${serviceUrl}`);
-  logger.info(`Swagger API is running at: ${serviceUrl}/api`);
+  logger.info(`Swagger API is running at: ${serviceUrl}/docs`);
+  logger.info(`Swagger API JSON is running at: ${serviceUrl}/docs-json`);
   logger.info(`This ENV is: ${configService.get('NODE_ENV')}`);
 }
 
