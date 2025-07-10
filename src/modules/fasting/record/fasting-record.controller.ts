@@ -4,12 +4,14 @@ import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { JwtAuthGuard } from '@src/common/guards/jwtAuth.guard';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('断食记录管理')
+@UseGuards(JwtAuthGuard)
 @Controller('fastingRecord')
 export class FastingRecordController {
   constructor(private readonly fastingRecordService: FastingRecordService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Get('list')
   @ApiOperation({ summary: '获取断食记录' })
   @ApiResponse({ status: 200, description: '获取断食记录成功' })
@@ -17,7 +19,6 @@ export class FastingRecordController {
     return this.fastingRecordService.getRecord(query);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('create')
   @ApiOperation({ summary: '创建断食记录' })
   @ApiResponse({ status: 200, description: '创建断食记录成功' })
@@ -25,7 +26,6 @@ export class FastingRecordController {
     return this.fastingRecordService.create(record);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('update')
   @ApiOperation({ summary: '更新断食记录' })
   @ApiResponse({ status: 200, description: '更新断食记录成功' })
