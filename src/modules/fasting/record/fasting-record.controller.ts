@@ -19,11 +19,11 @@ export class FastingRecordController {
     return this.fastingRecordService.getRecord(query);
   }
 
-  @Get('getRecordByDate')
-  @ApiOperation({ summary: '根据日期获取断食记录' })
-  @ApiResponse({ status: 200, description: '根据日期获取断食记录成功' })
-  getRecordByDate(@Query() query: { userId: string; date: string }) {
-    return this.fastingRecordService.getRecordByDate(query);
+  @Get('getUnfinishedRecord')
+  @ApiOperation({ summary: '获取尚未结束的断食记录' })
+  @ApiResponse({ status: 200, description: '获取尚未结束的断食记录成功' })
+  getUnfinishedRecord(@Query() query: { userId: string; planId: string }) {
+    return this.fastingRecordService.getUnfinishedRecord(query);
   }
 
   @Post('create')

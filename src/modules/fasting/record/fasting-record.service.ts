@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
-import { PrismaClient } from '@prisma/client';
+import { FastingStatus, PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
 import { calculateFastingDurationByTime } from '@utils/dateUtil';
 import { AchievementService } from '@src/modules/achievement/achievement.service';
@@ -43,6 +43,12 @@ export class FastingRecordService {
   async getRecordByDate(query: { userId: string; date: string }) {
     return this.prisma.fastingRecord.findFirst({
       where: { userId: query.userId, date: new Date(query.date) }
+    });
+  }
+
+  async getUnfinishedRecord(query: { userId: string; planId: string }) {
+    return this.prisma.fastingRecord.findFirst({
+      where: { userId: query.userId, planId: query.planId, status: FastingStatus.active }
     });
   }
 
