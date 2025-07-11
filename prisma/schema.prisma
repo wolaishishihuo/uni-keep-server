@@ -60,12 +60,12 @@ model FastingPlan {
   fastingType      FastingPlanType @default(TIME_16_8) @map("fasting_type")      // 断食类型
   fastingHours     Int             @default(16) @map("fasting_hours")            // 断食时长(小时)，默认16小时
   eatingHours      Int             @default(8) @map("eating_hours")              // 进食时长(小时)，默认8小时
-  startTime        String          @map("start_time") @db.VarChar(8)             // 断食开始时间
-  endTime          String          @map("end_time") @db.VarChar(8)               // 断食结束时间
+  startTime        String          @map("start_time") @db.VarChar(19)            // 断食开始时间 (YYYY-MM-DD HH:mm:ss)
+  endTime          String          @map("end_time") @db.VarChar(19)              // 断食结束时间 (YYYY-MM-DD HH:mm:ss)
   isActive         String          @default("0") @map("is_active")          // 是否为当前活跃计划
   createdAt        DateTime        @default(now()) @map("created_at")            // 创建时间
   updatedAt        DateTime        @updatedAt @map("updated_at")                 // 更新时间
-  fasting_reminder String?         @db.VarChar(8)                                // 断食提醒时间
+  fasting_reminder String?         @db.VarChar(19)                               // 断食提醒时间 (YYYY-MM-DD HH:mm:ss)
 
   // 关系映射
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)    // 所属用户
