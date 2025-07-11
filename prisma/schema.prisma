@@ -83,8 +83,8 @@ model FastingRecord {
   userId      String        @map("user_id")                                    // 所属用户ID
   planId      String        @map("plan_id")                                    // 关联的断食计划ID
   date        DateTime      @db.Date                                           // 断食日期
-  startTime   String        @map("start_time") @db.VarChar(8)                 // 实际开始时间
-  endTime     String?       @map("end_time") @db.VarChar(8)                   // 实际结束时间
+  startTime   String        @map("start_time") @db.VarChar(100)                 // 实际开始时间
+  endTime     String?       @map("end_time") @db.VarChar(100)                   // 实际结束时间
   actualHours Decimal       @default(0.00) @map("actual_hours") @db.Decimal(4, 2) // 实际断食时长
   status      FastingStatus @default(active)                                  // 断食状态
   breakReason String?       @map("break_reason") @db.VarChar(200)             // 中断原因

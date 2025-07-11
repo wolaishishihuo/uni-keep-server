@@ -40,6 +40,12 @@ export class FastingRecordService {
     });
   }
 
+  async getRecordByDate(query: { userId: string; date: string }) {
+    return this.prisma.fastingRecord.findFirst({
+      where: { userId: query.userId, date: new Date(query.date) }
+    });
+  }
+
   async update(updateFastingRecordDto: UpdateFastingRecordDto) {
     const recordInfo = await this.prisma.fastingRecord.findUnique({
       where: { id: updateFastingRecordDto.id }
@@ -52,11 +58,7 @@ export class FastingRecordService {
     }
 
     // 使用新的时间计算函数，基于断食记录的日期
-    const actualHours = calculateFastingDurationByTime(
-      recordInfo.startTime,
-      updateFastingRecordDto.endTime,
-      recordInfo.date
-    );
+    const actualHours = calculateFastingDurationByTime(recordInfo.startTime, updateFastingRecordDto.endTime);
 
     try {
       await this.prisma.fastingRecord.update({

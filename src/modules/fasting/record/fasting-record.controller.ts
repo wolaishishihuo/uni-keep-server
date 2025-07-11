@@ -19,6 +19,13 @@ export class FastingRecordController {
     return this.fastingRecordService.getRecord(query);
   }
 
+  @Get('getRecordByDate')
+  @ApiOperation({ summary: '根据日期获取断食记录' })
+  @ApiResponse({ status: 200, description: '根据日期获取断食记录成功' })
+  getRecordByDate(@Query() query: { userId: string; date: string }) {
+    return this.fastingRecordService.getRecordByDate(query);
+  }
+
   @Post('create')
   @ApiOperation({ summary: '创建断食记录' })
   @ApiResponse({ status: 200, description: '创建断食记录成功' })
