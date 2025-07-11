@@ -23,6 +23,7 @@ import { FastingModule } from './modules/fasting/plan/fasting.module';
 import { SystemModule } from './modules/system/system.module';
 import { FastingRecordModule } from './modules/fasting/record/fasting-record.module';
 import { AchievementModule } from './modules/achievement/achievement.module';
+import { PushNotificationsModule } from './modules/push-notifications/push-notifications.module';
 import authConfig from './config/auth.config';
 import businessConfig from './config/business.config';
 import thirdPartyConfig from './config/third-party.config';
@@ -54,7 +55,8 @@ import thirdPartyConfig from './config/third-party.config';
     FastingModule,
     SystemModule,
     FastingRecordModule,
-    AchievementModule
+    AchievementModule,
+    PushNotificationsModule
   ], // 依赖注入
   controllers: [AppController],
   providers: [AppService]
