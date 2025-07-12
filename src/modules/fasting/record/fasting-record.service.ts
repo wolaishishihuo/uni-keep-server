@@ -15,7 +15,7 @@ export class FastingRecordService {
   async create(createFastingRecordDto: CreateFastingRecordDto) {
     const { fastingDate, ...recordDto } = createFastingRecordDto;
     try {
-      await this.prisma.fastingRecord.create({
+      const record = await this.prisma.fastingRecord.create({
         data: {
           ...recordDto,
           date: new Date(fastingDate)
@@ -23,6 +23,7 @@ export class FastingRecordService {
       });
       return {
         code: 200,
+        data: record,
         message: '创建断食记录成功'
       };
     } catch (error) {
