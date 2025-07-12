@@ -41,12 +41,17 @@ export class FastingService {
   }
 
   async getActivePlan(userId: string) {
-    return this.prisma.fastingPlan.findFirst({
+    const plan = await this.prisma.fastingPlan.findFirst({
       where: {
         userId,
         isActive: '1'
       }
     });
+    return {
+      code: 200,
+      data: plan,
+      message: '获取活跃断食计划成功'
+    };
   }
 
   private async deactivateAllPlans(userId: string) {

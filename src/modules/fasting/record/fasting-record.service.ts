@@ -47,9 +47,14 @@ export class FastingRecordService {
   }
 
   async getUnfinishedRecord(query: { userId: string; planId: string }) {
-    return this.prisma.fastingRecord.findFirst({
+    const record = await this.prisma.fastingRecord.findFirst({
       where: { userId: query.userId, planId: query.planId, status: FastingStatus.active }
     });
+    return {
+      code: 200,
+      data: record,
+      message: '获取尚未结束的断食记录成功'
+    };
   }
 
   async update(updateFastingRecordDto: UpdateFastingRecordDto) {

@@ -14,10 +14,10 @@ export class ResponseInterceptor implements NestInterceptor {
           return {
             data: data?.data || '',
             code: data.code,
-            message: data?.message || (+data.code === 1 ? 'ok' : 'fail')
+            message: data?.message || (+data.code === 200 ? 'ok' : 'fail')
           };
         }
-        return { data, code: res.statusCode || 1, message: 'ok' };
+        return { data, code: res.statusCode || 200, message: 'ok' };
       })
     );
   }
