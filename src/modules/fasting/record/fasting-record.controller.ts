@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Query,
+  UseInterceptors,
+  ClassSerializerInterceptor
+} from '@nestjs/common';
 import { FastingRecordService } from './fasting-record.service';
 import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { JwtAuthGuard } from '@src/common/guards/jwtAuth.guard';
@@ -9,6 +18,7 @@ import { ApiTags } from '@nestjs/swagger';
 @ApiTags('断食记录')
 @UseGuards(JwtAuthGuard)
 @Controller('fastingRecord')
+@UseInterceptors(ClassSerializerInterceptor) // 为整个控制器应用类序列化拦截器
 export class FastingRecordController {
   constructor(private readonly fastingRecordService: FastingRecordService) {}
 
@@ -29,8 +39,8 @@ export class FastingRecordController {
   @Post('create')
   @ApiOperation({ summary: '创建断食记录' })
   @ApiResponse({ status: 200, description: '创建断食记录成功' })
-  createRecord(@Body() record: CreateFastingRecordDto) {
-    return this.fastingRecordService.create(record);
+  createRecord(@Body() recordDto: CreateFastingRecordDto) {
+    return this.fastingRecordService.create(recordDto);
   }
 
   @Post('update')

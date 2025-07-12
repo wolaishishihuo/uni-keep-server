@@ -4,11 +4,13 @@ import { FastingStatus, PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
 import { AchievementService } from '@src/modules/achievement/achievement.service';
 import {
+  calculateEndTime,
   calculateFastingDurationByTime,
   getContinuousFastingDays,
   getCurrentWeekDays,
   getFastingDays
 } from '../utils/fasting.utils';
+import { FastingRecordEntity } from './entities/fasting-record.entity';
 
 @Injectable()
 export class FastingRecordService {
@@ -18,7 +20,7 @@ export class FastingRecordService {
   ) {}
 
   async create(createFastingRecordDto: CreateFastingRecordDto) {
-    const { fastingDate, ...recordDto } = createFastingRecordDto;
+    const { fastingDate, eatingHours, ...recordDto } = createFastingRecordDto;
     try {
       const record = await this.prisma.fastingRecord.create({
         data: {
@@ -26,9 +28,15 @@ export class FastingRecordService {
           date: new Date(fastingDate)
         }
       });
+      const actualEndTime = calculateEndTime(recordDto.startTime, eatingHours);
+
+      // 创建实体并添加计算的结束时间
+      const recordEntity = new FastingRecordEntity(record);
+      recordEntity.actualEndTime = actualEndTime;
+
       return {
         code: 200,
-        data: record,
+        data: recordEntity,
         message: '创建断食记录成功'
       };
     } catch (error) {
