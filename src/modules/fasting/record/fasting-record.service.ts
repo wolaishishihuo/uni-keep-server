@@ -2,8 +2,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateFastingRecordDto } from './dto/create-fasting-record.dto';
 import { FastingStatus, PrismaClient } from '@prisma/client';
 import { UpdateFastingRecordDto } from './dto/update-fasting-record.dto';
-import { calculateFastingDurationByTime } from '@utils/dateUtil';
 import { AchievementService } from '@src/modules/achievement/achievement.service';
+import {
+  calculateFastingDurationByTime,
+  getContinuousFastingDays,
+  getCurrentWeekDays,
+  getFastingDays
+} from '../utils/fasting.utils';
 
 @Injectable()
 export class FastingRecordService {
@@ -82,20 +87,11 @@ export class FastingRecordService {
       });
 
       // 🎯 检查断食成就
-      const newAchievements = await this.achievementService.checkFastingAchievements(recordInfo.userId);
-
-      // 🎉 如果有新成就解锁，可以发送通知
-      if (newAchievements.length > 0) {
-        console.log(`用户 ${recordInfo.userId} 解锁了新成就:`, newAchievements);
-        // TODO: 发送成就通知
-      }
+      // const newAchievements = await this.achievementService.checkFastingAchievements(recordInfo.userId);
 
       return {
         code: 200,
-        message: '更新断食记录成功',
-        data: {
-          unlockedAchievements: newAchievements // 返回给前端显示
-        }
+        message: '更新断食记录成功'
       };
     } catch (error) {
       return {
@@ -103,5 +99,34 @@ export class FastingRecordService {
         message: error.message
       };
     }
+  }
+
+  // 获取断食记录数据统计
+  async getRecordDataStatistics(planId: string) {
+    const record = await this.prisma.fastingRecord.findMany({
+      where: { planId },
+      orderBy: { createdAt: 'desc' } // 按创建时间倒序
+    });
+
+    //  总天数, 成功天数, 成功率, 连续天数, 本周坚持天数, 本周完成率, 总断食时长
+    const allDays = getFastingDays(record) + 1;
+    const successDays = record.filter((item) => item.status === FastingStatus.completed).length;
+
+    const successRate = (successDays / allDays) * 100;
+    const continuousDays = getContinuousFastingDays(record);
+
+    const currentWeekDays = getCurrentWeekDays(record) + 1;
+    const currentWeekSuccessRate = (currentWeekDays / currentWeekDays) * 100;
+    const totalFastingDuration = record.reduce((acc, item) => acc + Number(item.actualHours.toFixed(2)), 0).toFixed(2);
+
+    return {
+      allDays,
+      successDays,
+      successRate,
+      continuousDays,
+      currentWeekDays,
+      currentWeekSuccessRate,
+      totalFastingDuration
+    };
   }
 }

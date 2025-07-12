@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AchievementType } from '@prisma/client';
 import { BaseAchievementChecker } from './base-checker.service';
-import { getContinuousFastingDays } from '../../../modules/user/user.utils';
+import { getContinuousFastingDays } from '@src/modules/fasting/utils/fasting.utils';
 
 @Injectable()
 export class FastingChecker extends BaseAchievementChecker {

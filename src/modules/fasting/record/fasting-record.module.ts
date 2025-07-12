@@ -6,6 +6,7 @@ import { AchievementModule } from '@src/modules/achievement/achievement.module';
 @Module({
   imports: [AchievementModule],
   controllers: [FastingRecordController],
-  providers: [FastingRecordService]
+  providers: [FastingRecordService],
+  exports: [FastingRecordService]
 })
 export class FastingRecordModule {}

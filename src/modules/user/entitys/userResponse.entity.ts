@@ -135,6 +135,15 @@ export class UserResponseEntity {
   signature?: string;
 
   @ApiProperty({
+    description: '是否完成基本设置',
+    example: true
+  })
+  @Expose()
+  get isSetup(): boolean {
+    return !!(this.nickname && this.currentWeight && this.targetWeight);
+  }
+
+  @ApiProperty({
     description: '断食天数',
     example: 10,
     required: false
@@ -149,15 +158,6 @@ export class UserResponseEntity {
   })
   @Expose()
   continuousFastingDays?: number;
-
-  @ApiProperty({
-    description: '是否完成基本设置',
-    example: true
-  })
-  @Expose()
-  get isSetup(): boolean {
-    return !!(this.nickname && this.currentWeight && this.targetWeight);
-  }
 
   @ApiProperty({
     description: 'BMI',

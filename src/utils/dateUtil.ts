@@ -181,57 +181,6 @@ export const getDateDiff = (
 };
 
 /**
- * 计算断食时长（基于完整日期时间格式）
- * @param startDateTime 开始时间，格式为 YYYY-MM-DD HH:mm:ss
- * @param endDateTime 结束时间，格式为 YYYY-MM-DD HH:mm:ss
- * @param utcOffset 可选，时区偏移（小时），默认8
- * @returns 断食时长（小时，保留2位小数）
- * @example
- * // 同一天内断食
- * calculateFastingDurationByTime('2024-12-26 08:00:00', '2024-12-26 16:00:00');
- * // => 8.00
- *
- * // 跨天断食
- * calculateFastingDurationByTime('2024-12-26 20:00:00', '2024-12-27 08:00:00');
- * // => 12.00
- *
- * // 多天断食
- * calculateFastingDurationByTime('2024-12-26 18:00:00', '2024-12-28 06:00:00');
- * // => 36.00
- */
-export const calculateFastingDurationByTime = (
-  startDateTime: string,
-  endDateTime: string,
-  utcOffset: number = 8
-): number => {
-  // 验证日期时间格式
-  const dateTimeRegex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
-  if (!dateTimeRegex.test(startDateTime) || !dateTimeRegex.test(endDateTime)) {
-    throw new HttpException('时间格式不正确，应为 YYYY-MM-DD HH:mm:ss', HttpStatus.BAD_REQUEST);
-  }
-
-  // 解析开始时间和结束时间
-  const startTime = dayjs(startDateTime, 'YYYY-MM-DD HH:mm:ss').utcOffset(utcOffset);
-  const endTime = dayjs(endDateTime, 'YYYY-MM-DD HH:mm:ss').utcOffset(utcOffset);
-
-  // 验证日期有效性
-  if (!startTime.isValid() || !endTime.isValid()) {
-    throw new BadRequestException('无效的日期时间格式');
-  }
-
-  // 确保结束时间不早于开始时间
-  if (endTime.isBefore(startTime)) {
-    throw new HttpException('结束时间不能早于开始时间', HttpStatus.BAD_REQUEST);
-  }
-
-  // 计算时长差异（小时）
-  const diffHours = endTime.diff(startTime, 'hour', true);
-
-  // 保留2位小数
-  return Math.round(diffHours * 100) / 100;
-};
-
-/**
  * 暴露 dayjs 原生能力。
  */
 export default dayjs;

@@ -29,19 +29,7 @@ export class UserService {
 
   async findById(id: string): Promise<any> {
     return this.prisma.user.findFirst({
-      where: { id },
-      include: {
-        fastingPlans: {
-          where: {
-            isActive: '1'
-          }
-        },
-        fastingRecords: {
-          orderBy: {
-            createdAt: 'desc'
-          }
-        }
-      }
+      where: { id }
     });
   }
 

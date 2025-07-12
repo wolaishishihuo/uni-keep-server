@@ -17,7 +17,6 @@ import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwtAuth.guard';
 import { CompleteSetupDto } from './dto/completeSetup.dto';
 import { UserResponseEntity } from './entitys/userResponse.entity';
-import { getContinuousFastingDays, getFastingDays } from './user.utils';
 import { UserLoginDto } from './dto/loginUser.dto';
 import { Public } from '@src/common/decorators/public.decorator';
 
@@ -53,12 +52,8 @@ export class UserController {
   })
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: string): Promise<any> {
-    const { fastingPlans, fastingRecords, ...user } = await this.userService.findById(id);
-    return new UserResponseEntity({
-      ...user,
-      fastingDays: getFastingDays(fastingPlans),
-      continuousFastingDays: getContinuousFastingDays(fastingRecords)
-    });
+    const user = await this.userService.findById(id);
+    return new UserResponseEntity(user);
   }
 
   @Post('update')
