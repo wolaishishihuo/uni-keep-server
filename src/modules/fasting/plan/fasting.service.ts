@@ -2,10 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CreateFastingDto } from './dto/create-fasting.dto';
 import { PrismaClient } from '@prisma/client';
 import { calculateEndTime, calculateFastingHours } from '../utils/fasting.utils';
+import { FastingRecordService } from '../record/fasting-record.service';
 
 @Injectable()
 export class FastingService {
-  constructor(@Inject('PrismaClient') private prisma: PrismaClient) {}
+  constructor(
+    @Inject('PrismaClient') private prisma: PrismaClient,
+    private readonly fastingRecordService: FastingRecordService
+  ) {}
 
   async create(createFastingDto: CreateFastingDto) {
     const { fastingType, planName, startTime, isActive } = createFastingDto;
@@ -47,9 +51,18 @@ export class FastingService {
         isActive: '1'
       }
     });
+
+    let statistics = null;
+    if (plan) {
+      statistics = await this.fastingRecordService.getRecordDataStatistics(plan.id);
+    }
+
     return {
       code: 200,
-      data: plan,
+      data: {
+        plan,
+        statistics
+      },
       message: '获取活跃断食计划成功'
     };
   }

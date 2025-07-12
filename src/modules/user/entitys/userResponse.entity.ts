@@ -144,22 +144,6 @@ export class UserResponseEntity {
   }
 
   @ApiProperty({
-    description: '断食天数',
-    example: 10,
-    required: false
-  })
-  @Expose()
-  fastingDays?: number;
-
-  @ApiProperty({
-    description: '连续断食天数',
-    example: 10,
-    required: false
-  })
-  @Expose()
-  continuousFastingDays?: number;
-
-  @ApiProperty({
     description: 'BMI',
     example: 22.5,
     required: false
@@ -167,16 +151,6 @@ export class UserResponseEntity {
   @Expose()
   get bmi(): string {
     return (this.currentWeight / (this.height / 100) ** 2).toFixed(2);
-  }
-
-  @ApiProperty({
-    description: '目标达成率',
-    example: 100,
-    required: false
-  })
-  @Expose()
-  get targetRate(): string {
-    return ((this.targetWeight / this.currentWeight) * 100).toFixed(2);
   }
 
   constructor(partial: User) {

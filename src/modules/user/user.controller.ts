@@ -31,6 +31,7 @@ export class UserController {
 
   @Public()
   @Post('login')
+  @UseInterceptors(ClassSerializerInterceptor)
   @ApiOperation({ summary: '用户登录' })
   @ApiResponse({ status: 200, description: '登录请求处理完成' })
   @HttpCode(HttpStatus.OK)
@@ -43,8 +44,8 @@ export class UserController {
     };
   }
 
-  @UseInterceptors(ClassSerializerInterceptor)
   @Get('info/:id')
+  @UseInterceptors(ClassSerializerInterceptor)
   @ApiOperation({ summary: '根据用户id查询用户' })
   @ApiResponse({
     status: 200,

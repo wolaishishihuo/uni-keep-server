@@ -108,16 +108,33 @@ export class FastingRecordService {
       orderBy: { createdAt: 'desc' } // 按创建时间倒序
     });
 
+    // 如果没有记录，返回初始值
+    if (!record || record.length === 0) {
+      return {
+        allDays: 0,
+        successDays: 0,
+        successRate: 0,
+        continuousDays: 0,
+        currentWeekDays: 0,
+        currentWeekSuccessRate: 0,
+        totalFastingDuration: '0'
+      };
+    }
+
     //  总天数, 成功天数, 成功率, 连续天数, 本周坚持天数, 本周完成率, 总断食时长
     const allDays = getFastingDays(record) + 1;
     const successDays = record.filter((item) => item.status === FastingStatus.completed).length;
 
-    const successRate = (successDays / allDays) * 100;
+    const successRate = allDays > 0 ? (successDays / allDays) * 100 : 0;
     const continuousDays = getContinuousFastingDays(record);
 
     const currentWeekDays = getCurrentWeekDays(record) + 1;
-    const currentWeekSuccessRate = (currentWeekDays / currentWeekDays) * 100;
-    const totalFastingDuration = record.reduce((acc, item) => acc + Number(item.actualHours.toFixed(2)), 0).toFixed(2);
+    const currentWeekSuccessRate = currentWeekDays > 0 ? (currentWeekDays / currentWeekDays) * 100 : 0;
+
+    // 处理实际时长为null的情况
+    const totalFastingDuration = record
+      .reduce((acc, item) => acc + (item.actualHours ? Number(item.actualHours.toFixed(2)) : 0), 0)
+      .toFixed(2);
 
     return {
       allDays,
@@ -128,5 +145,13 @@ export class FastingRecordService {
       currentWeekSuccessRate,
       totalFastingDuration
     };
+  }
+
+  // 根据Id获取断食记录
+  async getRecordById(id: string) {
+    const record = await this.prisma.fastingRecord.findUnique({
+      where: { id }
+    });
+    return record;
   }
 }

@@ -39,4 +39,12 @@ export class FastingRecordController {
   updateRecord(@Body() record: UpdateFastingRecordDto) {
     return this.fastingRecordService.update(record);
   }
+
+  // 根据Id获取断食记录
+  @Get('getRecordById')
+  @ApiOperation({ summary: '根据Id获取断食记录' })
+  @ApiResponse({ status: 200, description: '根据Id获取断食记录成功' })
+  getRecordById(@Query() query: { id: string }) {
+    return this.fastingRecordService.getRecordById(query.id);
+  }
 }

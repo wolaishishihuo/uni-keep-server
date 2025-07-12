@@ -30,15 +30,15 @@ export class FastingController {
   }
 
   @Get('plan/active')
-  @ApiOperation({ summary: '获取当前活跃的断食计划' })
+  @ApiOperation({ summary: '获取当前活跃的断食计划及其统计数据' })
   @ApiQuery({ name: 'userId', type: String, required: true })
-  @ApiResponse({ status: 200, description: '获取活跃断食计划成功' })
+  @ApiResponse({ status: 200, description: '获取活跃断食计划及统计数据成功' })
   getActivePlan(@Query() query: { userId: string }) {
     return this.fastingService.getActivePlan(query.userId);
   }
 
   @Get('plan/statistics')
-  @ApiOperation({ summary: '获取断食计划数据统计' })
+  @ApiOperation({ summary: '获取断食计划数据统计（单独接口）' })
   @ApiQuery({ name: 'planId', type: String, required: true })
   @ApiResponse({ status: 200, description: '获取断食计划数据统计成功' })
   getPlanDataStatistics(@Query() query: { planId: string }) {
